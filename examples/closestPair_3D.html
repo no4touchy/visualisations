@@ -86,10 +86,16 @@
         }
         redraw();
         
-        /* --- Start animation after 2.5s --- */
-        setTimeout(function(){
+        /* --- Setup play buttons --- */
+        var sButton = jQuery("<button/>");
+        sButton.append("Single").on("click", function(e){
+            ClosestPair.activity.executeSingle();
+        });
+        var cButton = jQuery("<button/>");
+        cButton.append("Continous").on("click", function(e){
             ClosestPair.activity.executeContinous();
-        }, 2500);
+        });
+        jQuery(".menu").append(sButton).append(cButton);
     </script>
 </body>
 </html>
