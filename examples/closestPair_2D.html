@@ -21,11 +21,25 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
     
-    <script src="js/closestPair.js"></script>
-    <script src="js/helper.js"></script>
-    
     <script type="text/javascript">
+        var scripts = [
+            "../js/visualisations.js",
+            "js/helper.js",
+            "js/closestPair.js",
+        ];
         jQuery.noConflict();
+        
+        jQuery.each(scripts, function(i, script){
+            jQuery.ajax({
+                url: script,
+                dataType: "script",
+                async: false,
+                complete: function(xhr, status){
+                    eval(xhr);
+                    console.log(status);
+                },
+            });
+        });
         
         /* *** COMPUTATIONAL SECTION *** */
         var MAX_POINTS = 15;
@@ -33,11 +47,12 @@
         /* --- Generate some random points and bounding box --- */
         var points = [];
         for(var i = 0;i < MAX_POINTS;i++){
-            points.push(new THREE.Vector3(
+            var vector = new THREE.Vector3(
                 (Math.random() * 2 - 1) * SIZE,
                 (Math.random() * 2 - 1) * SIZE,
                 0.0
-            ));
+            );
+            points.push(ClosestPair.vector2Mesh(vector));
         }
         var boundingBox = new THREE.Box3(
             new THREE.Vector3(-SIZE, -SIZE, 0.0),
@@ -46,20 +61,8 @@
         /* --- Find closest points --- */
         var result = ClosestPair.findPair(points, boundingBox);
         
-        /* *** GRAPHICAL SECTION *** */
-        var $el = jQuery(".container");
-        var WIDTH = $el.width(),
-            HEIGHT = $el.height();
-        /* --- ThreeJS setup --- */    
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(75., WIDTH / HEIGHT, 0.1, 1000.);
-        var renderer = new THREE.WebGLRenderer({
-            alpha: true,
-            antialias: true,
-        });
-        camera.position.z = 30;
-        renderer.setSize(WIDTH, HEIGHT);
-        $el.append(renderer.domElement);
+        /* --- Graphics --- */
+        var g = visualisations.threeSetup(".container");
         /* --- Setup cube for rendering --- */
         var box = new THREE.Mesh(
             new THREE.BoxGeometry(SIZE * 2, SIZE * 2, 0.0),
@@ -68,77 +71,24 @@
                 transparent: true,
                 opacity: 0.1})
         );
-        var wireBox = new THREE.EdgesHelper(box, 0x0000ff);
-        wireBox.material.linewidth = 2;
-        scene.add(box);
-        scene.add(wireBox);
-        /* --- Add small cubes --- */
-        var miniBoxes = [];
-        for(var i = 0;i < points.length;i++){
-            var miniBox = new THREE.Mesh(
-                new THREE.BoxGeometry(.3, .3, 0.0),
-                new THREE.MeshBasicMaterial({color: 0x00ff00})
-            );
-            miniBox.position.add(points[i]);
-            miniBoxes.push(miniBox);
-            box.add(miniBox);
-        }
-        /* --- Closest points line --- */
-        var closestPairLine = helper.arrayToLine(
-            result.pair,
-            new THREE.LineBasicMaterial({color: 0x0000ff})
-        );
-        wireBox.add(closestPairLine);
-        
-        /* --- Process partition tree --- */
-        var table = jQuery("<table/>");
-        var partitionArray = helper.browseTree(result.boundingTree);
-        var maxPower = partitionArray.length - 1;
-        jQuery.each(partitionArray, function(i, partitions){
-            var row = jQuery("<tr/>");
-            var colSpan = Math.pow(2, maxPower - i);
-            jQuery.each(partitions, function(j, partition){
-                //$menu.append(section + ", ");
-                var item = jQuery("<span/>")
-                    .css("border", "1px solid #6C8CD5")
-                    .css("padding", "1px 2px 1px 2px")
-                    .append(partition.label + " (Call #" + (partition.id + 1) + ")")
-                    .hover(
-                        function(e){
-                            jQuery.each(box.children, function(i, miniBox){
-                                if(!partition.boundingBox.containsPoint(miniBox.position)){
-                                    miniBox.material.color.setHex(0xff0000);
-                                }
-                            });
-                            box.add(partition.box);
-                        },
-                        function(e){
-                            jQuery.each(box.children, function(i, miniBox){
-                                if(!partition.boundingBox.containsPoint(miniBox.position)){
-                                    miniBox.material.color.setHex(0x00ff00);
-                                }
-                            });
-                            box.remove(partition.box);
-                        }
-                    );
-                row.append(
-                    jQuery("<td/>")
-                        .attr("colspan", colSpan)
-                        .css("text-align", "center")
-                        .append(item)
-                );
-            });
-            table.append(row);
+        g.scene.add(box);
+        box.add(ClosestPair.minimumLines);
+        jQuery.each(points, function(i, point){
+            box.add(point);
         });
-        jQuery(".menu").append(table);
         
         /* --- Redraw function --- */
         function redraw(){
             console.log("redraw called");
-            renderer.render(scene, camera);
+            g.renderer.render(g.scene, g.camera);
             helper.requestAnimationFrame(redraw);
         }
         redraw();
+        
+        /* --- Start animation after 2.5s --- */
+        setTimeout(function(){
+            ClosestPair.activity.executeContinous();
+        }, 2500);
     </script>
 </body>
 </html>
