@@ -52,28 +52,40 @@
                 (Math.random() * 2 - 1) * SIZE,
                 (Math.random() * 2 - 1) * SIZE
             );
-            points.push(ClosestPair.vector2Mesh(vector));
+            points.push(vector);
         }
         var boundingBox = new THREE.Box3(
-            new THREE.Vector3(-SIZE, -SIZE, 0.0),
-            new THREE.Vector3( SIZE,  SIZE, 0.0)
+            new THREE.Vector3(-SIZE, -SIZE, -SIZE),
+            new THREE.Vector3( SIZE,  SIZE, SIZE)
         );
         /* --- Find closest points --- */
-        var result = ClosestPair.findPair(points, boundingBox);
+        var result = ClosestPair.init(points, boundingBox);
         
         /* --- Graphics --- */
         var g = visualisations.threeSetup(".container");
         /* --- Setup cube for rendering --- */
-        var box = new THREE.Mesh(
-            new THREE.BoxGeometry(SIZE * 2, SIZE * 2, SIZE * 2),
-            new THREE.MeshBasicMaterial({
-                color: 0x0000ff,
-                transparent: true,
-                opacity: 0.1})
-        );
+        var box = new THREE.Object3D();
+        var directionLines = [
+            ClosestPair.vector2Line([
+                new THREE.Vector3(0.0, 0.0, 0.0),
+                new THREE.Vector3(1.0, 0.0, 0.0),
+            ]),
+            ClosestPair.vector2Line([
+                new THREE.Vector3(0.0, 0.0, 0.0),
+                new THREE.Vector3(0.0, 1.0, 0.0),
+            ]),
+            ClosestPair.vector2Line([
+                new THREE.Vector3(0.0, 0.0, 0.0),
+                new THREE.Vector3(0.0, 0.0, 1.0),
+            ]),
+        ];
         g.scene.add(box);
-        box.add(ClosestPair.minimumLines);
-        jQuery.each(points, function(i, point){
+        jQuery.each(directionLines, function(i, line){
+            line.material.color.setHex(0xff << (8 * i));
+            box.add(line);
+        });
+        box.add(result.minimumLines);
+        jQuery.each(result.points, function(i, point){
             box.add(point);
         });
         
@@ -89,13 +101,14 @@
         /* --- Setup play buttons --- */
         var sButton = jQuery("<button/>");
         sButton.append("Single").on("click", function(e){
-            ClosestPair.activity.executeSingle();
+            result.animationQueue.executeSingle();
         });
         var cButton = jQuery("<button/>");
         cButton.append("Continous").on("click", function(e){
-            ClosestPair.activity.executeContinous();
+            result.animationQueue.executeContinous();
         });
         jQuery(".menu").append(sButton).append(cButton);
+        result.buildAnimations();
     </script>
 </body>
 </html>
