@@ -4,6 +4,7 @@ window.ClosestPair = (function(){
     var DivisionNode = function(boundingBox, points, closestPair, minimumDistance, divisionAxis){
         /** (THREE.Box3, array of THREE.Vector3[, array of 2 THREE.Vector3, float, integer]) -> ClosestPair.DivisionNode
          *  Create a new `ClosestPair.DivisionNode`.
+         *  Worst Case: O(1) time
          */
         if(closestPair === undefined){closestPair = null;}
         if(minimumDistance === undefined){minimumDistance = Number.POSITIVE_INFINITY;}
@@ -27,6 +28,7 @@ window.ClosestPair = (function(){
     DivisionNode.prototype.addChild = function(node, index){
         /** (ClosestPair.DivisionNode[, integer]) -> null
          *  Add a child to the current node, index is optional.
+         *  Worst Case: O(1) time
          */
         if(index === undefined){
             index = 0;
@@ -38,6 +40,7 @@ window.ClosestPair = (function(){
     var DivisionTree = function(root){
         /** (ClosestPair.DivisionNode) -> ClosestPair.DivisioTree
          *  Creates a new `ClosestPair.DivisionTree` object rooted at the node provided.
+         *  Worst Case: O(1) time
          */
         this.root = root;
         this.points = null; // Holds THREE.Mesh objects
@@ -53,6 +56,10 @@ window.ClosestPair = (function(){
         
     };
     DivisionTree.prototype.buildAnimations = function(){
+        /** () -> null
+         *  Build an animation queue recursively on the DivisionTree, inorder traversal.
+         *  Worst Case: O(n) time
+         */
         var self = this;
         var recFunc = function(node, level){
             if(node.children[0] === null){
@@ -171,6 +178,49 @@ window.ClosestPair = (function(){
         }, {"self": self,});
     };
     
+    var PointList = function(points){
+        /** (array of THREE.Vector3 (augmented with uuid from meshes)) -> ClosestPair.PointList
+         *  A point list object, usefull for resorting previously sorted lists of points
+         *  Worst Case: O(n ln n)
+         */
+         var sort = function(points, axis){
+            /** (array of THREE.Vector3 (augmented with and uuid), integer) -> Object{uuid: sortedIndex}
+             *  Sort points and return sorted indices by uuid key.
+             *  Worst Case: O(n ln n)
+             */
+            /* --- Sort points in O(n ln n) time --- */
+            var sortedPoints = points.sort(function(a, b){
+                return a.getComponent(axis) - b.getComponent(axis);
+            });
+            /* --- Create Object with uuid as key, and sorted index as value, O(n) time --- */
+            var result = {};
+            for(var i = 0;i < sortedPoints.length;i++){
+                result[sortedPoints[i].uuid] = i;
+            }
+            return result;
+        };
+        /* --- Store results for later use --- */ 
+        this.sorted = [
+            sort(points, 0),
+            sort(points, 1),
+            sort(points, 2),
+        ];
+    };
+    PointList.prototype.resort = function(points, axis){
+        /** (array of THREE.Vector3 (augmented with and uuid), integer) -> Object{uuid: sortedIndex}
+         *  Using the presorted indecies arrays, resort the current set of point on the given axis.
+         *  Worst Case: O(n)
+         */
+        var result = [];
+        for(var i = 0;i < points.length;i++){
+            var sortedIndex = this.sorted[axis][points[i].uuid];
+            result[sortedIndex] = points[i];
+        }
+        return result.filter(function(n){
+            return n !== undefined && n !== null
+        });
+    };
+    
     var ClosestPair = {
         // Some constants
         point: {
@@ -183,10 +233,12 @@ window.ClosestPair = (function(){
         // Some objexts
         DivisionTree: DivisionTree,
         DivisionNode: DivisionNode,
+        PointList: PointList,
         // Some helper functions
         vector2Line: function(vectors){
             /** (array of 2 THREE.Vector3) -> THREE.Line
              *  Creates a line from a list of 2 vectors.
+             *  Worst Case: O(1)
              */
             var geometry = new THREE.Geometry();
             geometry.vertices = vectors;
@@ -195,6 +247,7 @@ window.ClosestPair = (function(){
         vector2Point: function(vector){
             /** (THREE.Vector3) -> THREE.Mesh
              *  Creates a point centered at `vector`.
+             *  Worst Case: O(1)
              */
             var mesh = new THREE.Mesh(ClosestPair.point.geometry, ClosestPair.point.material.clone());
             mesh.position = vector;
@@ -203,6 +256,7 @@ window.ClosestPair = (function(){
         box2Mesh: function(box){
             /** (THREE.Box3) -> THREE.Mesh
              *  Creates a new mesh that outlines the bounding box.
+             *  Worst Case: O(1)
              */
             var width  = Math.abs(box.max.x - box.min.x),
                 height = Math.abs(box.max.y - box.min.y),
@@ -226,6 +280,7 @@ window.ClosestPair = (function(){
         findMaxAxis: function(box, excludeAxis){
             /** (THREE.Box3[, integer]) -> integer
              *  Fix axis with largest dimensions, ignoring some axis
+             *  Worst Case: O(1), given that there is a constant number of axes
              */
              if(excludeAxis === undefined){
                  excludeAxis = -1;
@@ -243,11 +298,13 @@ window.ClosestPair = (function(){
         findMiddlePair: function(points, axis){
             /** (array of array of THREE.Vector3, integer) -> {points, distance}
              *  Finds the closest pair of points inside the middle partition.
+             *  Worst Case: O(n)
              */
-            var sortFunc = function(a, b){
-                return a.getComponent(axis) - b.getComponent(axis);
-            };
             var analyzePoints = function(a, b){
+                /** (THREE.Vector3, THREE.Vector3) -> Object
+                 *  Automatically handles out of bounds errors 
+                 *  Worst Case: O(1)
+                 */
                 try{
                     return {
                         points: [a, b],
@@ -258,30 +315,31 @@ window.ClosestPair = (function(){
                 }
             };
             var comparePoints = function(a, b){
+                /** (Object, Object) -> Object
+                 *  Returns the object pair with the smallest distance
+                 *  Worst Case: O(1)
+                 */
                 return a.distance < b.distance ? a : b;
             };
-            var sortedPoints = [
-                points[0].sort(sortFunc),
-                points[1].sort(sortFunc),
-            ];
             var closest = {points: null, distance: Number.POSITIVE_INFINITY,};
-            var i = 0, j = 0, m = Math.min(sortedPoints[0].length, sortedPoints[1].length);
+            var i = 0, j = 0, m = Math.min(points[0].length, points[1].length);
             while(i < m && j < m){
-                var current = analyzePoints(sortedPoints[0][i], sortedPoints[1][j]), next;
-                if(sortedPoints[0][i].getComponent(axis) > sortedPoints[1][j].getComponent(axis)){
-                    next = analyzePoints(sortedPoints[0][i], sortedPoints[1][j + 1]);
+                var current = analyzePoints(points[0][i], points[1][j]), next;
+                if(points[0][i].getComponent(axis) > points[1][j].getComponent(axis)){
+                    next = analyzePoints(points[0][i], points[1][j + 1]);
                     i++;
                 }else{
-                    next = analyzePoints(sortedPoints[0][i + 1], sortedPoints[1][j]);
+                    next = analyzePoints(points[0][i + 1], points[1][j]);
                     j++;
                 }
                 closest = comparePoints(closest, comparePoints(current, next));
             }
             return closest;
         },
-        findPair: function(points, boundingBox){
+        findPair: function(points, boundingBox, sortCache){
             /** (array of THREE.Vector3, THREE.Box3) -> ClosestPair.DivisionNode
-             *  Find the smallest 
+             *  Find the pair of points with the smallest distance
+             *  Worst Case: O(n ln n)
              */
             /* --- 1 or less points --- */
             if(points.length < 2){
@@ -306,9 +364,7 @@ window.ClosestPair = (function(){
             var node = new ClosestPair.DivisionNode(boundingBox, points);
             /* --- Find max axis and sort boxes on that axis --- */
             node.divisionAxis = ClosestPair.findMaxAxis(boundingBox);
-            var sortedPoints = points.sort(function(a, b){
-                return a.getComponent(node.divisionAxis) - b.getComponent(node.divisionAxis);
-            });
+            var sortedPoints = sortCache.resort(points, node.divisionAxis);
             /* --- Find median of sorted array --- */
             var medianIndex = sortedPoints.length / 2;
             var median = (  sortedPoints[Math.floor(medianIndex)].getComponent(node.divisionAxis) +
@@ -318,15 +374,15 @@ window.ClosestPair = (function(){
             var boxes = [boundingBox.clone(), boundingBox.clone()];
             boxes[0].max.setComponent(node.divisionAxis, median);
             boxes[1].min.setComponent(node.divisionAxis, median);
-            /* --- Partition points --- */
+            /* --- Partition points, O(n) --- */
             var partionedPoints = [[], []];
             for(var i = 0;i < sortedPoints.length;i++){
                 var partition = sortedPoints[i].getComponent(node.divisionAxis) < median ? 0 : 1;
                 partionedPoints[partition].push(sortedPoints[i]);
             }
-            /* --- Find closest points in partitions --- */
+            /* --- Find closest points in partitions, O(n) --- */
             for(var i = 0;i < 2;i++){
-                node.addChild(ClosestPair.findPair(partionedPoints[i], boxes[i]), i);
+                node.addChild(ClosestPair.findPair(partionedPoints[i], boxes[i], sortCache), i);
             }
             /* --- Find the closer pair --- */
             var childIndex = node.children[0].minimumDistance < node.children[1].minimumDistance ? 0 : 1;
@@ -334,7 +390,7 @@ window.ClosestPair = (function(){
                 points: node.children[childIndex].closestPair,
                 distance: node.children[childIndex].minimumDistance,
             };
-            /* --- Handle middle partition points --- */
+            /* --- Handle middle partition points, O(n) --- */
             var middlePoints = [[], []];
             for(var i = 0;i < 2;i++){
                 for(var j = 0;j < partionedPoints[i].length;j++){
@@ -343,31 +399,39 @@ window.ClosestPair = (function(){
                     }
                 }
             }
-            var middle = ClosestPair.findMiddlePair(
-                middlePoints,
-                ClosestPair.findMaxAxis(boundingBox, node.divisionAxis)
-            );
+            /* --- Resort middle points in linear time and find closest pair, O(n) --- */
+            var secondIndex = ClosestPair.findMaxAxis(boundingBox, node.divisionAxis);
+            middlePoints = [
+                sortCache.resort(middlePoints[0], secondIndex),
+                sortCache.resort(middlePoints[1], secondIndex),
+            ];
+            var middle = ClosestPair.findMiddlePair(middlePoints, secondIndex);
+            /* --- Compare middle minimum pair with partitioned minimum pair --- */
             if(middle.distance < closest.distance){
                 closest = middle;
             }
+            /* ---  Setup the node --- */
             node.closestPair = closest.points;
             node.minimumDistance = closest.distance;
             node.middle = middle;
             node.middle.allPoints = middlePoints;
+            /* --- Return node --- */
             return node;
         },
         // Init function
         init: function(points, boundingBox){
             /** (array of THREE.Vector3, THREE.Box3) -> ClosestPair.DivisionNode
              *  Find the closest pair, and keep all computations in a tree.
+             *  Worst case: O(n ln n), given by ClosestPair.findPair and ClosestPair.PointList
              */
-            var tree = new DivisionTree(ClosestPair.findPair(points, boundingBox));
+            var tree = new DivisionTree(null);
             tree.points = {};
             for(var i = 0;i < points.length;i++){
                 var point = ClosestPair.vector2Point(points[i]);
                 tree.points[point.uuid] = point;
                 points[i].uuid = point.uuid;
             }
+            tree.root = ClosestPair.findPair(points, boundingBox, new PointList(points));
             return tree;
         },
     };

@@ -104,8 +104,16 @@
             result.animationQueue.executeSingle();
         });
         var cButton = jQuery("<button/>");
+        cButton.action = false;
         cButton.append("Continous").on("click", function(e){
-            result.animationQueue.executeContinous();
+            if(!cButton.action){
+                result.animationQueue.executeContinous();
+                cButton.text("Stop");
+                cButton.action = true;
+            }else{
+                cButton.text("Continue");
+                cButton.action = false;
+            }
         });
         jQuery(".menu").append(sButton).append(cButton);
         result.buildAnimations();

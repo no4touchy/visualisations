@@ -3,6 +3,8 @@ window.visualisations = (function(){
     function ActivityQueue(){
         this.head = null;
         this.tail = null;
+        this.current = null;
+        this.play = false;
     }
     ActivityQueue.prototype = {
         constructor: ActivityQueue,
