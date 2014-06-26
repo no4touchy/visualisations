@@ -4,7 +4,10 @@ window.visualisations = (function(){
         this.head = null;
         this.tail = null;
         this.current = null;
+        
         this.play = false;
+        this.timeout = 800;
+        this.resetFunc = function(){};
     }
     ActivityQueue.prototype = {
         constructor: ActivityQueue,
@@ -41,23 +44,34 @@ window.visualisations = (function(){
             }
             return result;
         },
+        reset: function(){
+            this.current = this.head;
+            this.play = false;
+            window.setTimeout(this.resetFunc, 500);
+        },
         executeSingle: function(){
-            var obj = this.dequeue();
+            var obj = {func:function(data){return;},data:null,};
+            if(this.current === null){
+                this.current = this.head;
+            }
+            if(this.current !== null){
+                obj = this.current;
+                this.current = obj.next;
+            }
             return obj.func(obj.data);
         },
-        executeContinous: function(timeout){
-            if(timeout === undefined){
-                timeout = 800;
-            }
+        executeContinous: function(){
             var that = this;
+            this.play = true;
             var func = function(){
-                var obj = null;
-                try{
-                    that.executeSingle()
-                }catch(err){
-                    return err;
+                if(that.play){
+                    try{
+                        that.executeSingle();
+                    }catch(err){
+                        return err;
+                    }
+                    window.setTimeout(func, that.timeout);
                 }
-                window.setTimeout(func, timeout);
             };
             func();
         },

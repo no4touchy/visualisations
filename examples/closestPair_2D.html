@@ -100,9 +100,32 @@
         });
         var cButton = jQuery("<button/>");
         cButton.append("Continous").on("click", function(e){
-            result.animationQueue.executeContinous();
+            if(!result.animationQueue.play){
+                result.animationQueue.executeContinous();
+                cButton.text("Stop");
+            }else{
+                cButton.text("Continue");
+                result.animationQueue.play = false;
+            }
         });
-        jQuery(".menu").append(sButton).append(cButton);
+        var rButton = jQuery("<button/>");
+        rButton.append("Reset").on("click", function(e){
+            result.animationQueue.reset();
+            cButton.text("Continous");
+        });
+        var tEl = jQuery("<span/>").append(result.animationQueue.timeout);
+        var lButton = jQuery("<button/>");
+        lButton.append("<<").on("click", function(e){
+            result.animationQueue.timeout -= 10;
+            tEl.text(result.animationQueue.timeout);
+        });
+        var mButton = jQuery("<button/>");
+        mButton.append(">>").on("click", function(e){
+            result.animationQueue.timeout += 10;
+            tEl.text(result.animationQueue.timeout);
+        });
+        jQuery(".menu").append(sButton).append(cButton).append(rButton)
+            .append("<br />\n").append(lButton).append(tEl).append(mButton);
         result.buildAnimations();
     </script>
 </body>

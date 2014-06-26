@@ -61,6 +61,17 @@ window.ClosestPair = (function(){
          *  Worst Case: O(n) time
          */
         var self = this;
+        self.animationQueue.resetFunc = function(){
+            console.log(self.root);
+            jQuery.each(self.root.points, function(i, point){
+                self.points[point.uuid].material.color.setHex(
+                    self.colors.unselected
+                );
+            });
+            jQuery.each(self.minimumLines.children, function(i, line){
+                self.minimumLines.remove(line);
+            });
+        };
         var recFunc = function(node, level){
             if(node.children[0] === null){
                 // Highlight data
