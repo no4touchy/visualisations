@@ -1,9 +1,9 @@
-window.visualisations = (function(){
+window.visualisations = (function () {
     
     var POINT_SIZE = 0.3;
     var POINT_GEOMETRY = new THREE.BoxGeometry(POINT_SIZE, POINT_SIZE, POINT_SIZE);
     
-    function ActivityQueue(){
+    function ActivityQueue () {
         this.head = null;
         this.tail = null;
         this.current = null;
@@ -14,7 +14,7 @@ window.visualisations = (function(){
     }
     ActivityQueue.prototype = {
         constructor: ActivityQueue,
-        enqueue: function(func, data){
+        enqueue: function (func, data) {
             var obj = {
                 func: func,
                 data: data,
@@ -30,7 +30,7 @@ window.visualisations = (function(){
                 this.tail = obj;
             }
         },
-        dequeue: function(){
+        dequeue: function () {
             var result = null;
             if(this.head === null){
                 throw "No items in ActivityQueue!";
@@ -47,12 +47,12 @@ window.visualisations = (function(){
             }
             return result;
         },
-        reset: function(){
+        reset: function () {
             this.current = this.head;
             this.play = false;
             window.setTimeout(this.resetFunc, 500);
         },
-        executeSingle: function(){
+        executeSingle: function () {
             var obj = {func:function(data){return;},data:null,};
             if(this.current === null){
                 this.current = this.head;
@@ -63,7 +63,7 @@ window.visualisations = (function(){
             }
             return obj.func(obj.data);
         },
-        executeContinous: function(){
+        executeContinous: function () {
             var that = this;
             this.play = true;
             var func = function(){
@@ -102,7 +102,7 @@ window.visualisations = (function(){
         };
     }
     
-    AnimationList.noop = function() {};
+    AnimationList.noop = function () {};
     AnimationList.Node = function (timeoutName, forward, backward, next, previous) {
         /** (string, [function[, function[, visualisations.AnimationList.Node[, visualisations.AnimationList.Node]]]]) -> visualisations.AnimationList.Node
          *  Builds a storage node
@@ -216,7 +216,7 @@ window.visualisations = (function(){
                 };
     })().bind(window);
     
-    function vectors2Line(vectors, material){
+    function vectors2Line (vectors, material) {
         /** (array of 2 THREE.Vector3[, THREE.LineBasicMaterial]) -> THREE.Line
          *  Create a new line with the given vectors, and optionaly a material.
          *  O(1) time
@@ -227,7 +227,7 @@ window.visualisations = (function(){
         return line;
     }
     
-    function vector2Point (vector, material, geometry){
+    function vector2Point (vector, material, geometry) {
         /** (THREE.Vector3[, THREE.MeshBasciMateria[, THREE.Geometry]]) -> THREE.Mesh
          *  Creates a point centered at `vector`.
          * O(1) time
