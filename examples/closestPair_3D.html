@@ -1,34 +1,37 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Closest Pair - WebGL test</title>
-    <style>
-        .container {
-            background: #FFFFFF;
-            width: 800px;
-            height: 800px;
-        }
-    </style>
-    <!--[if lt IE 9]>
-        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-</head>
-<body>
-    <div class="container" style="float: left;"></div>
-    <div class="menu" style="float: right;"></div>
     
-    <script src="../js/jquery-2.1.1.min.js"></script>
-    <script src="../js/three.min.js"></script>
+    <head>
+        <meta charset="utf-8">
+        <title>Closest Pair - WebGL test</title>
+        <style>
+            .container {
+                background: #FFFFFF;
+                width: 800px;
+                height: 800px;
+            }
+        </style>
+        <!--[if lt IE 9]>
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    </head>
     
-    <script src="../js/visualisations.js"></script>
-    <script src="js/closestPair.js"></script>
-    <script src="js/helper.js"></script>
-    
-    <script type="text/javascript">
-        jQuery.noConflict();
+    <body>
+        <div class="container" style="float: left;"></div>
+        <div class="menu" style="float: right;"></div>
         
-        var result = ClosestPair.init3d(30, 10);
-    </script>
-</body>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
+        
+        <script src="../js/visualisations.js"></script>
+        <script src="js/closestPair.js"></script>
+        <script src="js/helper.js"></script>
+        
+        <script type="text/javascript">
+            jQuery.noConflict();
+
+            var result = ClosestPair.init3D(30, 10);
+        </script>
+    </body>
+
 </html>

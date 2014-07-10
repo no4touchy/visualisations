@@ -3,179 +3,116 @@ window.visualisations = (function () {
     var POINT_SIZE = 0.3;
     var POINT_GEOMETRY = new THREE.BoxGeometry(POINT_SIZE, POINT_SIZE, POINT_SIZE);
     
-    function ActivityQueue () {
-        this.head = null;
-        this.tail = null;
-        this.current = null;
-        
-        this.play = false;
-        this.timeout = 800;
-        this.resetFunc = function(){};
-    }
-    ActivityQueue.prototype = {
-        constructor: ActivityQueue,
-        enqueue: function (func, data) {
-            var obj = {
-                func: func,
-                data: data,
-                prev: null,
-                next: null,
-            };
-            if(this.tail === null){
-                this.head = obj;
-                this.tail = obj;
-            }else{
-                this.tail.next = obj;
-                obj.prev = this.tail;
-                this.tail = obj;
-            }
-        },
-        dequeue: function () {
-            var result = null;
-            if(this.head === null){
-                throw "No items in ActivityQueue!";
-            }
-            if(this.head.next === null){
-                result = this.head;
-                this.head = null;
-                this.tail = null;
-            }else{
-                result = this.head;
-                this.head = this.head.next;
-                result.next = null;
-                this.head.prev = null;
-            }
-            return result;
-        },
-        reset: function () {
-            this.current = this.head;
-            this.play = false;
-            window.setTimeout(this.resetFunc, 500);
-        },
-        executeSingle: function () {
-            var obj = {func:function(data){return;},data:null,};
-            if(this.current === null){
-                this.current = this.head;
-            }
-            if(this.current !== null){
-                obj = this.current;
-                this.current = obj.next;
-            }
-            return obj.func(obj.data);
-        },
-        executeContinous: function () {
-            var that = this;
-            this.play = true;
-            var func = function(){
-                if(that.play){
-                    try{
-                        that.executeSingle();
-                    }catch(err){
-                        return err;
-                    }
-                    window.setTimeout(func, that.timeout);
-                }
-            };
-            func();
-        },
-    };
-    
     function AnimationList () {
         /** () -> visualisations.AnimationList
          *  Constructs a new animation queue
          *  O(1) time
-         */
-        // Set end nodes
-        this.startNode = AnimationList.Node("empty");
-        this.endNode = AnimationList.Node("empty");
-        this.startNode.next = this.endNode;
-        this.endNode.previous = this.startNode;
-        // Flow controls
-        this.start = this.startNode;
-        this.current = this.startNode;
-        this.play = false;
-        this.timeout = {
-            start: 800,
-            middle: 800,
-            end: 800,
-            empty: 0
-        };
+        **/
+        // Linked list properties
+        this.headAnimation = null;
+        this.tailAnimation = null;
+        this.currentAnimation = null;
+        // Playing properties
+        this.timeout = 800;
+        this.playing = false;
     }
-    
     AnimationList.noop = function () {};
-    AnimationList.Node = function (timeoutName, forward, backward, next, previous) {
-        /** (string, [function[, function[, visualisations.AnimationList.Node[, visualisations.AnimationList.Node]]]]) -> visualisations.AnimationList.Node
-         *  Builds a storage node
+    AnimationList.Animation = function (build, destroy, next, previous) {
+        /** (functions, function[, visualisations.AnimationList.Animation[, visualisations.AnimationList.Animation]]) -> visualisations.AnimationList.Animation
+         *  Builds an Animation
          *  O(1) time
-         */
-        this.forward = forward !== undefined ? forward : AnimationList.noop;
-        this.backward = backward !== undefined ? backward : AnimationList.noop;
+        **/
+        // Set animation functions
+        this.buildAnimation = build;
+        this.destroyAnimation = destroy;
+        // Set linked list navigation pointers
         this.next = next !== undefined ? next : null;
         this.previous = previous !== undefined ? previous : null;
-        this.timeout = timeoutName;
-        this.parent = null;
     },
     AnimationList.prototype = {
         constructor: AnimationList,
-        addNode: function (node) {
-            /** (visualisations.AnimationList.Node) -> null
+        addAnimation: function(animation) {
+            /** (visualisations.AnimationList.animation) -> null
              *  Add new animation node to list
              *  O(1) time
-             */
-            var end = this.endNode.prev;
-            node.parent = this;
-            end.next = node;
-            node.prev = end;
-            this.endNode.prev = node;
-            node.next = this.endNode;
-        },
-        playForward: function () {
-            /** () -> ???
-             *  Play a single animation forward sequence
-             *  O(1) time
-             */
-            if (this.end == this.current) {
-                return;
+            **/
+            if(this.headAnimation !== null) {
+                this.tailAnimation.next = animation;
+                animation.previous = this.tailAnimation;
+                this.tailAnimation = animation;
+            }else{
+                this.headAnimation = animation;
+                this.tailAnimation = animation;
+                this.currentAnimation = animation;
             }
-            this.current = this.current.next;
-            return this.current.prev.forward();
         },
-        playBackward: function () {
-            /** () -> ???
-             *  Play a single animation backward sequence
+        nextAnimation: function() {
+            /** () -> boolean
+             *  Play a single animation forward sequence. Return false if its the last animation, else return true.
              *  O(1) time
-             */
-            if (this.start == this.current) {
-                return;
+            **/
+            if(this.tailAnimation === this.currentAnimation) {
+                return false;
             }
-            this.current = this.current.prev;
-            return this.current.next.backward();
+            if(this.headAnimation !== this.currentAnimation) {
+                this.currentAnimation.destroyAnimation();
+                this.currentAnimation = this.currentAnimation.next;
+            }
+            this.currentAnimation.buildAnimation();
+            return true;
         },
-        playForwardContinous: function () {
-            /** () -> null
-             *  Play through all the forward animation
-             *  O(n) time
-             */
-            var that = this;
-            window.setTimeout(function () {
-                if (that.play) {
-                    that.playForward();
-                    that.playForwardContinous();
-                }
-            }, this.timeout[this.current.timeout]);
+        previousAnimation: function() {
+            /** () -> boolean
+             *  Play a single animation forward sequence. Return false if its the last animation, else return true.
+             *  O(1) time
+            **/
+            if(this.headAnimation === this.currentAnimation) {
+                return false;
+            }
+            if(this.tailAnimation !== this.currentAnimation) {
+                this.currentAnimation.destroyAnimation();
+                this.currentAnimation = this.currentAnimation.previous;
+            }
+            this.currentAnimation.buildAnimation();
+            return true;
         },
-        playBackwardContinous: function () {
-            /** () -> null
-             *  Play through all the backward animation
-             *  O(n) time
-             */
+        nextAnimationLoop: function(firstFlag) {
+            /** () -> Null
+             *  Starts the animatin loop.
+             *  O(1) time, for this function call only
+            **/
+            var timeout = this.timeout;
             var that = this;
-            window.setTimeout(function () {
-                if (that.play) {
-                    that.playBackward();
-                    that.playBackwardContinous();
+            if(firstFlag === undefined) {
+                timeout = 0;
+                that.playing = true;
+            }
+            window.setTimeout(function() {
+                if(that.playing && that.nextAnimation()) {
+                    that.nextAnimationLoop(false);
+                }else {
+                    that.playing = false;
                 }
-            }, this.timeout[this.current.timeout]);
+            }, timeout);
+        },
+        previousAnimationLoop: function(firstFlag) {
+            /** () -> Null
+             *  Starts the backward animation loop.
+             *  O(1) time, for this function call only
+            **/
+            var timeout = this.timeout;
+            var that = this;
+            if(firstFlag === undefined) {
+                timeout = 0;
+                that.playing = true;
+            }
+            window.setTimeout(function() {
+                if(that.playing && that.previousAnimation()) {
+                    that.previousAnimationLoop(false);
+                }else {
+                    that.playing = false;
+                }
+            }, timeout);
         },
     };
     
@@ -245,7 +182,6 @@ window.visualisations = (function () {
         vectors2Line: vectors2Line,
         vector2Point: vector2Point,
         
-        ActivityQueue: ActivityQueue,
         AnimationList: AnimationList,
     };
 })();
