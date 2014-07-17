@@ -1,7 +1,7 @@
 window.visualisations = (function () {
     
-    var POINT_SIZE = 0.3;
-    var POINT_GEOMETRY = new THREE.BoxGeometry(POINT_SIZE, POINT_SIZE, POINT_SIZE);
+    var POINT_SIZE = 0.2;
+    var POINT_GEOMETRY = new THREE.SphereGeometry(POINT_SIZE);//new THREE.BoxGeometry(POINT_SIZE, POINT_SIZE, POINT_SIZE);
     
     function AnimationList () {
         /** () -> visualisations.AnimationList
@@ -12,6 +12,10 @@ window.visualisations = (function () {
         this.headAnimation = null;
         this.tailAnimation = null;
         this.currentAnimation = null;
+        this.animationCount = 0;
+        this.reachedEnd = true;
+        // Graphics object
+        this.g = new THREE.Object3D();
         // Playing properties
         this.timeout = 800;
         this.playing = false;
@@ -40,40 +44,47 @@ window.visualisations = (function () {
                 this.tailAnimation.next = animation;
                 animation.previous = this.tailAnimation;
                 this.tailAnimation = animation;
+                this.reachedEnd = false;
             }else{
                 this.headAnimation = animation;
                 this.tailAnimation = animation;
                 this.currentAnimation = animation;
             }
+            this.animationCount++;
         },
         nextAnimation: function() {
             /** () -> boolean
              *  Play a single animation forward sequence. Return false if its the last animation, else return true.
              *  O(1) time
             **/
-            if(this.tailAnimation === this.currentAnimation) {
+            if(this.currentAnimation === null){
                 return false;
             }
-            if(this.headAnimation !== this.currentAnimation) {
-                this.currentAnimation.destroyAnimation();
-                this.currentAnimation = this.currentAnimation.next;
+            this.currentAnimation.buildAnimation(this.g);
+            if(this.tailAnimation === this.currentAnimation) {
+                this.reachedEnd = true;
+                return false;
             }
-            this.currentAnimation.buildAnimation();
+            this.currentAnimation = this.currentAnimation.next;
             return true;
         },
         previousAnimation: function() {
             /** () -> boolean
-             *  Play a single animation forward sequence. Return false if its the last animation, else return true.
+             *  Play a single animation backward sequence. Return false if its the first animation, else return true.
              *  O(1) time
             **/
+            if(this.currentAnimation === null){
+                return false;
+            }
             if(this.headAnimation === this.currentAnimation) {
                 return false;
             }
-            if(this.tailAnimation !== this.currentAnimation) {
-                this.currentAnimation.destroyAnimation();
+            if(!this.reachedEnd){
                 this.currentAnimation = this.currentAnimation.previous;
+            }else{
+                this.reachedEnd = false;
             }
-            this.currentAnimation.buildAnimation();
+            this.currentAnimation.destroyAnimation(this.g);
             return true;
         },
         nextAnimationLoop: function(firstFlag) {
@@ -176,11 +187,35 @@ window.visualisations = (function () {
         return mesh;
     }
     
+    function boundingBox2Mesh (boundingBox, color){
+        /** (THREE.Box3, integer) -> THREE.Mesh
+         *  Create a mesh for the bounding box.  
+         *  O(1) time
+        **/
+        var material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.1,
+        });
+        var lengths = new THREE.Vector3(
+            Math.abs(boundingBox.max.x - boundingBox.min.x),
+            Math.abs(boundingBox.max.y - boundingBox.min.y),
+            Math.abs(boundingBox.max.z - boundingBox.min.z)
+        );
+        var geometry = new THREE.BoxGeometry(lengths.x, lengths.y, lengths.z);
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.position.add(lengths);
+        mesh.position.divideScalar(2);
+        mesh.position.add(boundingBox.min);
+        return mesh;
+    }
+    
     return {
         threeSetup: threeSetup,
         requestAnimationFrame: requestAnimationFrame,
         vectors2Line: vectors2Line,
         vector2Point: vector2Point,
+        boundingBox2Mesh: boundingBox2Mesh,
         
         AnimationList: AnimationList,
     };
