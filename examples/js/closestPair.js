@@ -61,64 +61,57 @@ var ClosestPair = (function() {
     }
 
     var animations = {
-        bruteforce: function(points, closest, animationList){
-            var colour = [0x00ff00, 0xaaaa00];
+        // Closest pair bruteforce animations
+        bruteforceAddPair: function(closestStruct, animationList){
+            closestStruct.line = visualisations.vectors2Line(closestStruct.pair);
+            closestStruct.line.material.color.setHex(0xaaaa00);
             
-            var closestLine = visualisations.vectors2Line(closest.pair);
-            closestLine.material.color.setHex(colour[0]);
-            closest.line = closestLine;
+            animationList.addAnimation(new visualisations.AnimationList.Animation(
+                /*construct*/ function(g){
+                    g.add(closestStruct.line);
+                },
+                /*destruct*/ function(g){
+                    g.remove(closestStruct.line);
+                }
+            ));
+        },
+        bruteforceSwapClosestLines: function(prevClosest, nextClosest, animationList){
+            var prevLine = prevClosest.line;
+            var nextLine = nextClosest.line;
             
-            // Make dashed lines if worthwhile
-            var dashedLines = [];
-            if(points.length == 3){
-                var dashedMaterial = new THREE.LineDashedMaterial({
-                    color: colour[1],
-                    dashSize: 2,
-                    gapSize: 2,
-                });
-                for(var i = 0;i < 3;i++){
-                    var pair = [points[i], points[(i + 1) % 3]];
-                    if(pair[0].distanceTo(pair[1]) != closest.distance){
-                        dashedLines.push(visualisations.vectors2Line(pair, dashedMaterial));
+            animationList.addAnimation(new visualisations.AnimationList.Animation(
+                /*construct*/ function(g){
+                    prevLine.material.color.setHex(0xaaaa00);
+                    nextLine.material.color.setHex(0x00ff00);
+                },
+                /*destruct*/ function(g){
+                    nextLine.material.color.setHex(0xaaaa00);
+                    prevLine.material.color.setHex(0x00ff00);
+                }
+            ));
+        },
+        bruteforceDestroyClosestLines: function(closestArray, closest, animationList){
+            animationList.addAnimation(new visualisations.AnimationList.Animation(
+                /*construct*/ function(g){
+                    for(var i = 0;i < 3;i++){
+                        if(closestArray[i].line.uuid == closest.line.uuid){
+                            continue;
+                        }
+                        g.remove(closestArray[i].line);
+                    }
+                },
+                /*destruct*/ function(g){
+                    for(var i = 0;i < 3;i++){
+                        if(closestArray[i].line.uuid == closest.line.uuid){
+                            continue;
+                        }
+                        g.add(closestArray[i].line);
                     }
                 }
-            }
-            
-            var construct = function(g){
-                g.add(closestLine);
-                for(var i = 0;i < dashedLines.length;i++){
-                    g.add(dashedLines[i]);
-                }
-            };
-            
-            var destruct = function(g){
-                g.remove(closestLine);
-                for(var i = 0;i < dashedLines.length;i++){
-                    g.remove(dashedLines[i]);
-                }
-            };
-            
-            // Animation for lines
-            animationList.addAnimation(new visualisations.AnimationList.Animation(construct, destruct));
-            
-            // Delete dashed lines
-            if(dashedLines.length != 0){
-                animationList.addAnimation(new visualisations.AnimationList.Animation(
-                    function(g){
-                        for(var i = 0;i < dashedLines.length;i++){
-                            g.remove(dashedLines[i]);
-                        }
-                    },
-                    function(g){
-                        for(var i = 0;i < dashedLines.length;i++){
-                            g.add(dashedLines[i]);
-                        }
-                    }
-                ));
-            }
+            ));
         },
         partitionPoints: function(context){
-            var colours = [0xff0000, 0x0000ff];
+            var colours = [0x9e190f, 0x152c6a];//[0xff0000, 0x0000ff];
             var colourCache = {};
             
             // Make meshes for bounding boxes
@@ -147,6 +140,39 @@ var ClosestPair = (function() {
             };
             
             context.animationList.addAnimation(new visualisations.AnimationList.Animation(construct, destruct));
+        },
+        togglePartitionBoxes: function(indices, context){
+            var on = false;
+            context.animationList.addAnimation(new visualisations.AnimationList.Animation(
+                /*construct*/ function(g){
+                    if(!on){
+                        on = true;
+                    }else{
+                        return;
+                    }
+                    for(var i = 0;i < indices.length;i++){
+                        if(g.children.indexOf(context.divisionMeshes[indices[i]]) > -1){
+                            g.remove(context.divisionMeshes[indices[i]]);
+                        }else{
+                            g.add(context.divisionMeshes[indices[i]]);
+                        }
+                    }
+                },
+                /*destruct*/ function(g){
+                    if(on){
+                        on = false;
+                    }else{
+                        return;
+                    }
+                    for(var i = 0;i < indices.length;i++){
+                        if(g.children.indexOf() > -1){
+                            g.add(context.divisionMeshes[indices[i]]);
+                        }else{
+                            g.remove(context.divisionMeshes[indices[i]]);
+                        }
+                    }
+                }
+            ));
         },
         
         pickClosest: function(a, b, animationList){
@@ -204,28 +230,41 @@ var ClosestPair = (function() {
             /** (Objects, array of THREE.Vector3, integer, integer) -> null
              * 
             **/
-            var dist = points[i].distanceTo(points[j]);
-            if(dist < currentClosest.distance) {
-                currentClosest.distance = dist;
-                currentClosest.pair = [points[i], points[j]];
+            // Create a temporary structure
+            var closestStruct = {
+                pair: [points[i], points[j]],
+                distance: points[i].distanceTo(points[j]),
+                line: null
+            };
+            animations.bruteforceAddPair(closestStruct, animationList);
+            if(closestStruct.distance < currentClosest.distance){
+                if(currentClosest.line === null){ /* First call to findClosest */
+                    closestStruct.line.material.color.setHex(0x00ff00); // TODO: Place this graphic context command elsewhere
+                }else{
+                    animations.bruteforceSwapClosestLines(currentClosest, closestStruct, animationList);
+                }
+                currentClosest.distance = closestStruct.distance;
+                currentClosest.pair = closestStruct.pair;
+                currentClosest.line = closestStruct.line;
             }
+            return closestStruct;
         };
         
         // Declare default
         var closest = {pair: points, distance: Number.POSITIVE_INFINITY, line: null};
+        var closestArray = [null, null, null];
         
         // Bound check in case >= 2 points
         if(points.length > 1) {
-            findClosest(closest, points, 0, 1);
+            closestArray[0] = findClosest(closest, points, 0, 1);
         }
         // Bound check in case = 3 points
         if(points.length == 3) {
-            findClosest(closest, points, 0, 2);
-            findClosest(closest, points, 1, 2);
+            closestArray[1] = findClosest(closest, points, 0, 2);
+            closestArray[2] = findClosest(closest, points, 1, 2);
+            // Destroy the yellow lines
+            animations.bruteforceDestroyClosestLines(closestArray, closest, animationList);
         }
-        
-        // Bind animation
-        animations.bruteforce(points, closest, animationList);
         
         // Return closest point
         return closest;
@@ -338,7 +377,6 @@ var ClosestPair = (function() {
         **/
         
         // 3 or less points
-        // ANIMATION DONE
         if (points.length <= 3) {
             return findPairBruteforce(points, boundingBox, animationList);
         }
@@ -354,8 +392,11 @@ var ClosestPair = (function() {
         // ANIMATION IN PROGRESS
         // -> remove divisionMeshes
         var division = [0, 0];
+        animations.togglePartitionBoxes([1], context);
         division[0] = findPair(context.partitionedPoints[0], context.boundingBoxes[0], animationList, sortCache);
+        animations.togglePartitionBoxes([0, 1], context);
         division[1] = findPair(context.partitionedPoints[1], context.boundingBoxes[1], animationList, sortCache);
+        animations.togglePartitionBoxes([0], context);
         
         // Find the closer pair
         var indexOfClosest = division[0].distance < division[1].distance ? 0 : 1;
@@ -367,6 +408,8 @@ var ClosestPair = (function() {
         
         // Find points with minimum distance in the middle section
         var middleClosest = findMiddlePair(context.middlePoints, context.divisionAxis, animationList);
+        
+        animations.togglePartitionBoxes([0, 1], context);
         
         // Return closer pair
         return context.closest.distance < middleClosest.distance ? context.closest : middleClosest;
@@ -401,7 +444,7 @@ var ClosestPair = (function() {
         }
         
         // Initialize graphics
-        var g = visualisations.threeSetup(".container");
+        var g = visualisations.threeSetup(".canvas");
         
         // Create box and directional lines
         g.scene.add(box);
@@ -441,6 +484,44 @@ var ClosestPair = (function() {
         };
     }
     
+    function makeButtons(animationList, elementTag){
+        var $el = jQuery(elementTag);
+        
+        var buttonsData = [
+            ["<<", "backward", function(){animationList.previousAnimation();}],
+            [">>", "forward", function(){animationList.nextAnimation();}],
+            [">", "continousPlay", function(){
+                var $this = jQuery(this);
+                animationList.finishCallback = function(){
+                        $this.text(">");
+                        animationList.playing = false;
+                };
+                switch($this.text()){
+                    case ">": // Curently not playing
+                        $this.text("||");
+                        animationList.nextAnimationLoop();
+                        break;
+                    case "||": // Currently not playing
+                    default: // Weird state
+                        animationList.finishCallback();
+                        break;
+                }
+            }],
+        ];
+        var buttons = {};
+        
+        for(var i = 0;i < buttonsData.length;i++){
+            buttons[buttonsData[i][1]] = jQuery("<button/>", {
+                text: buttonsData[i][0],
+                id: buttonsData[i][1],
+                click: buttonsData[i][2],
+            });
+        }
+        
+        $el.append(buttons["backward"]).append(buttons["forward"]).append("<br />");
+        $el.append(buttons["continousPlay"]);
+    }
+    
     function init3D(points, size) {
         return setup(
             points,
@@ -454,5 +535,7 @@ var ClosestPair = (function() {
     return {
         init3D: init3D,
         findPair: findPair,
+        
+        makeButtons: makeButtons,
     };
 })();

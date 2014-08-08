@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+        <title>Template Option for Visualisation</title>
+        <!-- Bootstrap core CSS -->
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media
+        queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+            <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    
+    <body>
+        <div class="navbar navbar-inverse" role="navigation">
+            <div class="container">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="/">Visualisations</a>
+                </div>
+                <div class="collapse navbar-collapse">
+                    <ul class="nav navbar-nav">
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">Closest Pair <span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                                <li>
+                                    <a href="#cp2d">Closest Pair 2D</a>
+                                </li>
+                                <li class="active">
+                                    <a href="#cp3d">Closest Pair 3D</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a href="#ch">Convex Hull</a>
+                        </li>
+                    </ul>
+                </div>
+                <!--/.nav-collapse -->
+            </div>
+        </div>
+        <div class="container">
+        
+	        <div class="col-lg-2 col-md-2">
+        		<ul class="nav nav-pills nav-stacked">
+					<li class="active"><a href="#">Closest Pair</a></li>
+					<li><a href="#">Convex Hull</a></li>
+				</ul>
+        	</div>
+        
+	        <div class="col-lg-10 col-md-10">
+	            <div class="bs-example bs-example-tabs">
+	                <ul id="myTab" class="nav nav-tabs" role="tablist">
+	                    <li class="active">
+	                        <a href="#demo3d" role="tab" data-toggle="tab">3D Demonstration</a>
+	                    </li>
+	                    <li class="">
+	                        <a href="#sample" role="tab" data-toggle="tab">Code Sample</a>
+	                    </li>
+	                    <li class="">
+	                        <a href="#demo" role="tab" data-toggle="tab">Demo</a>
+	                    </li>
+	                </ul>
+	                <div id="myTabContent" class="tab-content">
+	                    <div class="tab-pane fade active in" id="demo3d">
+	                        
+					        <div class="canvas" style="float: left;width: 600px;height: 600px"></div>
+					        <div class="menu" style="float: right;"></div>
+	                    </div>
+	                    <div class="tab-pane fade" id="sample">
+	                        <p></p>
+	                    </div>
+	                    <div class="tab-pane fade" id="demo">
+	                        <p></p>
+	                    </div>
+	                </div>
+	            </div>
+        	</div>
+        	
+
+            
+        </div>
+        <!-- /.container -->
+        <!-- Bootstrap core JavaScript==================================================-
+        ->
+        <!-- Placed at the end of the document so the pages load faster -->
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
+        <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+        
+        <script src="js/visualisations.js"></script>
+        <script src="examples/js/closestPair.js"></script>
+        <script src="examples/js/helper.js"></script>
+        
+        <script type="text/javascript">
+            $('#myTab a').click(function (e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
+            
+            jQuery.noConflict();
+            var result = ClosestPair.init3D(5, 10);
+            ClosestPair.makeButtons(result.al, ".menu");
+        </script>
+    </body>
+
+</html>

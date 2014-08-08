@@ -21,7 +21,7 @@
         <div class="menu" style="float: right;"></div>
         
         <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r66/three.min.js"></script>
         
         <script src="../js/visualisations.js"></script>
         <script src="js/closestPair.js"></script>
@@ -31,7 +31,9 @@
             jQuery.noConflict();
 
             var result = ClosestPair.init3D(5, 10);
+            
+            ClosestPair.makeButtons(result.al, ".menu");
         </script>
     </body>
 
-</html>
+</html><!doctype html>

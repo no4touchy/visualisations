@@ -1,132 +1,77 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Closest Pair - WebGL test</title>
-    <style>
-        .container {
-            background: #FFFFFF;
-            width: 800px;
-            height: 800px;
-        }
-    </style>
-    <!--[if lt IE 9]>
-        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-</head>
-<body>
-    <div class="container" style="float: left;"></div>
-    <div class="menu" style="float: right;"></div>
     
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
-    
-    <script type="text/javascript">
-        var scripts = [
-            "../js/visualisations.js",
-            "js/helper.js",
-            "js/closestPair.js",
-        ];
-        jQuery.noConflict();
-        
-        jQuery.each(scripts, function(i, script){
-            jQuery.ajax({
-                url: script,
-                dataType: "script",
-                async: false,
-                complete: function(xhr, status){
-                    eval(xhr);
-                    console.log(status);
-                },
-            });
-        });
-        
-        /* *** COMPUTATIONAL SECTION *** */
-        var MAX_POINTS = 20;
-        var SIZE = 10.0;
-        /* --- Generate some random points and bounding box --- */
-        var points = [];
-        for(var i = 0;i < MAX_POINTS;i++){
-            var vector = new THREE.Vector3(
-                (Math.random() * 2 - 1) * SIZE,
-                (Math.random() * 2 - 1) * SIZE,
-                0.0
-            );
-            points.push(vector);
-        }
-        var boundingBox = new THREE.Box3(
-            new THREE.Vector3(-SIZE, -SIZE, 0.0),
-            new THREE.Vector3( SIZE,  SIZE, 0.0)
-        );
-        /* --- Find closest points --- */
-        var result = ClosestPair.init(points, boundingBox);
-        
-        /* --- Graphics --- */
-        var g = visualisations.threeSetup(".container");
-        /* --- Setup cube for rendering --- */
-        var box = new THREE.Object3D();
-        var directionLines = [
-            ClosestPair.vector2Line([
-                new THREE.Vector3(0.0, 0.0, 0.0),
-                new THREE.Vector3(1.0, 0.0, 0.0),
-            ]),
-            ClosestPair.vector2Line([
-                new THREE.Vector3(0.0, 0.0, 0.0),
-                new THREE.Vector3(0.0, 1.0, 0.0),
-            ]),
-        ];
-        g.scene.add(box);
-        jQuery.each(directionLines, function(i, line){
-            line.material.color.setHex(0xff << (8 * i));
-            box.add(line);
-        });
-        box.add(result.minimumLines);
-        jQuery.each(result.points, function(i, point){
-            box.add(point);
-        });
-        
-        /* --- Redraw function --- */
-        function redraw(){
-            console.log("redraw called");
-            g.renderer.render(g.scene, g.camera);
-            helper.requestAnimationFrame(redraw);
-        }
-        redraw();
-        
-        /* --- Setup play buttons --- */
-        var sButton = jQuery("<button/>");
-        sButton.append("Single").on("click", function(e){
-            result.animationQueue.executeSingle();
-        });
-        var cButton = jQuery("<button/>");
-        cButton.append("Continous").on("click", function(e){
-            if(!result.animationQueue.play){
-                result.animationQueue.executeContinous();
-                cButton.text("Stop");
-            }else{
-                cButton.text("Continue");
-                result.animationQueue.play = false;
+    <head>
+        <meta charset="utf-8">
+        <title>Closest Pair - WebGL test</title>
+        <style>
+            .container {
+                background: #FFFFFF;
+                width: 800px;
+                height: 800px;
             }
-        });
-        var rButton = jQuery("<button/>");
-        rButton.append("Reset").on("click", function(e){
-            result.animationQueue.reset();
-            cButton.text("Continous");
-        });
-        var tEl = jQuery("<span/>").append(result.animationQueue.timeout);
-        var lButton = jQuery("<button/>");
-        lButton.append("<<").on("click", function(e){
-            result.animationQueue.timeout -= 10;
-            tEl.text(result.animationQueue.timeout);
-        });
-        var mButton = jQuery("<button/>");
-        mButton.append(">>").on("click", function(e){
-            result.animationQueue.timeout += 10;
-            tEl.text(result.animationQueue.timeout);
-        });
-        jQuery(".menu").append(sButton).append(cButton).append(rButton)
-            .append("<br />\n").append(lButton).append(tEl).append(mButton);
-        result.buildAnimations();
-    </script>
-</body>
+        </style>
+        <!--[if lt IE 9]>
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    </head>
+    
+    <body>
+        <div class="container" style="float: left;"></div>
+        <div class="menu" style="float: right;"></div>
+        
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
+        
+        <script src="../js/visualisations.js"></script>
+        <script src="js/closestPair.js"></script>
+        <script src="js/helper.js"></script>
+        
+        <script type="text/javascript">
+            jQuery.noConflict();
+
+            var result = ClosestPair.init3D(5, 10);
+            
+            ClosestPair.makeButtons(result.al, ".menu");
+        </script>
+    </body>
+
+</html><!doctype html>
+<html lang="en">
+    
+    <head>
+        <meta charset="utf-8">
+        <title>Closest Pair - WebGL test</title>
+        <style>
+            .container {
+                background: #FFFFFF;
+                width: 800px;
+                height: 800px;
+            }
+        </style>
+        <!--[if lt IE 9]>
+            <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+    </head>
+    
+    <body>
+        <div class="container" style="float: left;"></div>
+        <div class="menu" style="float: right;"></div>
+        
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
+        
+        <script src="../js/visualisations.js"></script>
+        <script src="js/closestPair.js"></script>
+        <script src="js/helper.js"></script>
+        
+        <script type="text/javascript">
+            jQuery.noConflict();
+
+            var result = ClosestPair.init2D(5, 10);
+            
+            ClosestPair.makeButtons(result.al, ".menu");
+        </script>
+    </body>
+
 </html>

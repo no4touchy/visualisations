@@ -19,6 +19,7 @@ window.visualisations = (function () {
         // Playing properties
         this.timeout = 800;
         this.playing = false;
+        this.finishCallback = AnimationList.noop;
     }
     AnimationList.noop = function () {};
     AnimationList.Animation = function (build, destroy, next, previous) {
@@ -63,6 +64,7 @@ window.visualisations = (function () {
             this.currentAnimation.buildAnimation(this.g);
             if(this.tailAnimation === this.currentAnimation) {
                 this.reachedEnd = true;
+                this.finishCallback();
                 return false;
             }
             this.currentAnimation = this.currentAnimation.next;
@@ -134,7 +136,7 @@ window.visualisations = (function () {
          */
         var $el = jQuery(selector);
         var WIDTH = $el.width(),
-            HEIGHT = $el.height();
+            HEIGHT = $el.height();console.log(HEIGHT + "x" + WIDTH);
         /* --- ThreeJS setup --- */    
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(75., WIDTH / HEIGHT, 0.1, 1000.);
@@ -195,7 +197,7 @@ window.visualisations = (function () {
         var material = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 0.1,
+            opacity: 0.25,
         });
         var lengths = new THREE.Vector3(
             Math.abs(boundingBox.max.x - boundingBox.min.x),
@@ -210,12 +212,23 @@ window.visualisations = (function () {
         return mesh;
     }
     
+    function objectInArray(object, array){
+        for(var i = 0;i < array.length;i++){
+            if(array[i] === object){
+                return true;
+            }
+        }
+        return false;
+    }
+    
     return {
         threeSetup: threeSetup,
         requestAnimationFrame: requestAnimationFrame,
         vectors2Line: vectors2Line,
         vector2Point: vector2Point,
         boundingBox2Mesh: boundingBox2Mesh,
+        
+        objectInArray : objectInArray,
         
         AnimationList: AnimationList,
     };
