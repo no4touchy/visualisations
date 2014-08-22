@@ -69,6 +69,8 @@ var ClosestPair = (function() {
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
                     g.add(closestStruct.line);
+                    console.log(g);
+                    console.log(closestStruct);
                 },
                 /*destruct*/ function(g){
                     g.remove(closestStruct.line);
@@ -76,6 +78,8 @@ var ClosestPair = (function() {
             ));
         },
         bruteforceSwapClosestLines: function(prevClosest, nextClosest, animationList){
+            // Assume nextClosest.dist < prevClosest.line
+            
             var prevLine = prevClosest.line;
             var nextLine = nextClosest.line;
             
@@ -118,7 +122,7 @@ var ClosestPair = (function() {
             context.divisionMeshes.push(visualisations.boundingBox2Mesh(context.boundingBoxes[0], colours[0]));
             context.divisionMeshes.push(visualisations.boundingBox2Mesh(context.boundingBoxes[1], colours[1]));
         
-            var construct = function(g){console.log("c->partition");
+            var construct = function(g){
                 g.add(context.divisionMeshes[0]);
                 g.add(context.divisionMeshes[1]);
                 for(var i = 0;i < 2;i++){
@@ -129,7 +133,7 @@ var ClosestPair = (function() {
                 }
             };
             
-            var destruct = function(g){console.log("d->partition");
+            var destruct = function(g){
                 g.remove(context.divisionMeshes[0]);
                 g.remove(context.divisionMeshes[1]);
                 for(var i = 0;i < 2;i++){
@@ -173,6 +177,19 @@ var ClosestPair = (function() {
                     }
                 }
             ));
+        },
+        
+        middleAddPair: function(closestStruct, context){
+            if(closestStruct.distance == Number.POSITIVE_INFINITY){
+                console.log("Error" + closestStruct);
+                return;
+            }
+            animations.bruteforceAddPair(closestStruct, context.animationList);
+            closestStruct.line.material.color.setHex(0x00ff00);
+        },
+        
+        filterClosest: function(closestArray, context){
+            animations.bruteforceDestroyClosestLines(closestArray, context.closest, context.animationList);
         },
         
         pickClosest: function(a, b, animationList){
@@ -338,14 +355,20 @@ var ClosestPair = (function() {
              *  Automatically handles out of bounds errors 
              *  Worst Case: O(1)
             **/
+            var result = {pair: null, distance: Number.POSITIVE_INFINITY,};
             try {
-                return {
+                result = {
                     pair: [a, b],
                     distance: a.distanceTo(b),
                 };
-            } catch(err) {
-                    return {pair: null, distance: Number.POSITIVE_INFINITY,};
+            } catch(err) { 
             }
+            // Quick fix to make sure points do not end up being compared with themselves
+            if(result.pair !== null && (result.pair[0].ptr.uuid == result.pair[1].ptr.uuid)){
+                result.distance = Number.POSITIVE_INFINITY;
+                console.log(result.pair[0].ptr.uuid + " == " + result.pair[1].ptr.uuid);
+            }
+            return result;
         };
         var comparePairs = function(a, b){
             /** (Object, Object) -> Object
@@ -392,27 +415,33 @@ var ClosestPair = (function() {
         // ANIMATION IN PROGRESS
         // -> remove divisionMeshes
         var division = [0, 0];
-        animations.togglePartitionBoxes([1], context);
-        division[0] = findPair(context.partitionedPoints[0], context.boundingBoxes[0], animationList, sortCache);
         animations.togglePartitionBoxes([0, 1], context);
+        division[0] = findPair(context.partitionedPoints[0], context.boundingBoxes[0], animationList, sortCache);
         division[1] = findPair(context.partitionedPoints[1], context.boundingBoxes[1], animationList, sortCache);
-        animations.togglePartitionBoxes([0], context);
+        animations.togglePartitionBoxes([0, 1], context);
         
         // Find the closer pair
         var indexOfClosest = division[0].distance < division[1].distance ? 0 : 1;
         context.closest = division[indexOfClosest];
-        animations.pickClosest(division[indexOfClosest], division[indexOfClosest === 0 ? 1 : 0], animationList);
+        //animations.pickClosest(division[indexOfClosest], division[indexOfClosest === 0 ? 1 : 0], animationList);
         
         // Partition middle points
         partitionMiddlePoints(context);
         
         // Find points with minimum distance in the middle section
         var middleClosest = findMiddlePair(context.middlePoints, context.divisionAxis, animationList);
+        animations.middleAddPair(middleClosest, context);
+        division[2] = middleClosest;
+        
+        // Find the closest points
+        indexOfClosest = division[2].distance < division[indexOfClosest].distance ? 2 : indexOfClosest;
+        context.closest = division[indexOfClosest];
+        animations.filterClosest(division, context);
         
         animations.togglePartitionBoxes([0, 1], context);
         
         // Return closer pair
-        return context.closest.distance < middleClosest.distance ? context.closest : middleClosest;
+        return context.closest;//.distance < middleClosest.distance ? context.closest : middleClosest;
     }
 
     function setup(numPoints, boundingBox) {

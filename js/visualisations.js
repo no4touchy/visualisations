@@ -221,6 +221,17 @@ window.visualisations = (function () {
         return false;
     }
     
+    function cloneObject(dest, source){
+        for(var attr in dest){
+            if(!(attr in source)){
+                delete dest[attr];
+            }
+        }
+        for(var attr in source){
+            dest[attr] = source[attr];
+        }
+    }
+    
     return {
         threeSetup: threeSetup,
         requestAnimationFrame: requestAnimationFrame,
@@ -229,6 +240,7 @@ window.visualisations = (function () {
         boundingBox2Mesh: boundingBox2Mesh,
         
         objectInArray : objectInArray,
+        cloneObject: cloneObject,
         
         AnimationList: AnimationList,
     };
