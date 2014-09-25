@@ -58,9 +58,12 @@
 	        <div class="col-lg-10 col-md-10">
 	            <div class="bs-example bs-example-tabs">
 	                <ul id="myTab" class="nav nav-tabs" role="tablist">
-	                    <li class="active">
-	                        <a href="#demo3d" role="tab" data-toggle="tab">3D Demonstration</a>
-	                    </li>
+                        <li class="active">
+                            <a href="#demo3d" role="tab" data-toggle="tab">3D Demonstration</a>
+                        </li>
+                        <li class="">
+                            <a href="#demo2d" role="tab" data-toggle="tab">2D Demonstration</a>
+                        </li>
 	                    <li class="">
 	                        <a href="#sample" role="tab" data-toggle="tab">Code Sample</a>
 	                    </li>
@@ -69,11 +72,16 @@
 	                    </li>
 	                </ul>
 	                <div id="myTabContent" class="tab-content">
-	                    <div class="tab-pane fade active in" id="demo3d">
-	                        
-					        <div class="canvas" style="float: left;width: 600px;height: 600px"></div>
-					        <div class="menu" style="float: right;"></div>
-	                    </div>
+                        <div class="tab-pane fade active in" id="demo3d">
+                            
+                            <div class="canvas3" style="float: left;width: 600px;height: 600px"></div>
+                            <div class="menu3" style="float: right;"></div>
+                        </div>
+                        <div class="tab-pane fade active in" id="demo3d">
+                            
+                            <div class="canvas2" style="float: left;width: 600px;height: 600px"></div>
+                            <div class="menu2" style="float: right;"></div>
+                        </div>
 	                    <div class="tab-pane fade" id="sample">
 	                        <p></p>
 	                    </div>
@@ -106,8 +114,10 @@
             });
             
             jQuery.noConflict();
-            var result = ClosestPair.init3D(".canvas", /*points*/25, /*grid size*/10);
-            ClosestPair.makeButtons(result.al, ".menu");
+            var result3 = ClosestPair.init3D(".canvas3", /*points*/25, /*grid size*/10);
+            ClosestPair.makeButtons(result3.al, ".menu3");
+            var result2 = ClosestPair.init2D(".canvas2", /*points*/25, /*grid size*/10);
+            ClosestPair.makeButtons(result2.al, ".menu2");
         </script>
     </body>
 

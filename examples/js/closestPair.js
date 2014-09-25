@@ -179,11 +179,7 @@ var ClosestPair = (function() {
             var on = false;
             context.animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
-                    if(!on){
-                        on = true;
-                    }else{
-                        return;
-                    }
+                    if(!on){on = true;}else{return;}
                     for(var i = 0;i < indices.length;i++){
                         if(g.children.indexOf(context.divisionMeshes[indices[i]]) > -1){
                             g.remove(context.divisionMeshes[indices[i]]);
@@ -193,13 +189,9 @@ var ClosestPair = (function() {
                     }
                 },
                 /*destruct*/ function(g){
-                    if(on){
-                        on = false;
-                    }else{
-                        return;
-                    }
+                    if(on){on = false;}else{return;}
                     for(var i = 0;i < indices.length;i++){
-                        if(g.children.indexOf() > -1){
+                        if(g.children.indexOf(context.divisionMeshes[indices[i]]) == -1){
                             g.add(context.divisionMeshes[indices[i]]);
                         }else{
                             g.remove(context.divisionMeshes[indices[i]]);
@@ -211,7 +203,8 @@ var ClosestPair = (function() {
         
         middleAddPair: function(closestStruct, context){
             if(closestStruct.distance == Number.POSITIVE_INFINITY){
-                console.log("Error" + closestStruct);
+                console.log("Error");
+                console.log(closestStruct);
                 return;
             }
             animations.bruteforceAddPair(closestStruct, context.animationList);
@@ -273,7 +266,7 @@ var ClosestPair = (function() {
          *  Find the pair of points with the smallest distance, max 3 points
          *  O(1) time
         **/
-        var findClosest = function(currentClosest, points, i, j) {
+        var findClosest = function(points, i, j) {
             /** (Objects, array of THREE.Vector3, integer, integer) -> null
              * 
             **/
@@ -284,29 +277,29 @@ var ClosestPair = (function() {
                 line: null
             };
             animations.bruteforceCreateLine(closestStruct);
-            if(closestStruct.distance < currentClosest.distance){
-                currentClosest.distance = closestStruct.distance;
-                currentClosest.pair = closestStruct.pair;
-                currentClosest.line = closestStruct.line;
-            }
             return closestStruct;
         };
         
         // Declare default
-        var closest = {pair: points, distance: Number.POSITIVE_INFINITY, line: null};
+        var closest = null;
         var closestArray = [];
         
         // Bound check in case >= 2 points
         if(points.length > 1) {
-            closestArray.push(findClosest(closest, points, 0, 1));
+            closestArray.push(findClosest(points, 0, 1));
         }
         // Bound check in case = 3 points
         if(points.length == 3) {
-            closestArray.push(findClosest(closest, points, 0, 2));
-            closestArray.push(findClosest(closest, points, 1, 2));
+            closestArray.push(findClosest(points, 0, 2));
+            closestArray.push(findClosest(points, 1, 2));
         }
         
-        
+        closest = closestArray[0];
+        for(var i = 1;i < closestArray.length;i++){
+            if(closestArray[i].distance < closest.distance){
+                closest = closestArray[i];
+            }
+        }
         
         animations.bruteforceAddPairs(closestArray, animationList);
         animations.bruteforcePickClosest(closestArray, closest, animationList);
@@ -473,10 +466,12 @@ var ClosestPair = (function() {
         return context.closest;//.distance < middleClosest.distance ? context.closest : middleClosest;
     }
 
-    function setup(numPoints, boundingBox) {
-        /** (integer, THREE.Box3) -> Null
+    function setup(canvas, numPoints, boundingBox, rotate) {
+        /** (string, integer, THREE.Box3, bool) -> Null
          * 
         **/
+        console.log(rotate);
+        if(rotate === undefined){rotate = true;}console.log(rotate);
         // Find the length of the bounding box on each axis
         var length = new THREE.Vector3(
             Math.abs(boundingBox.max.getComponent(0) - boundingBox.min.getComponent(0)),
@@ -502,27 +497,26 @@ var ClosestPair = (function() {
         }
         
         // Initialize graphics
-        var g = visualisations.threeSetup(".canvas");
+        var g = visualisations.threeSetup(canvas);
         
         // Create box and directional lines
         g.scene.add(box);
-        for (var i = 0;i < 3;i++) {
-            var ends = [new THREE.Vector3(), new THREE.Vector3()];
-            ends[1].setComponent(i, 1.0);
-            box.add(visualisations.vectors2Line(
-                ends,
-                new THREE.LineBasicMaterial({color: 0xff << (8 * i)})
-            ));
-        }
         
         // Redraw function
-        function redraw(){
-            //console.log("redraw called");
-            box.rotation.y += 0.01;
-            g.renderer.render(g.scene, g.camera);
-            visualisations.requestAnimationFrame(redraw);
+        g.redraw = function(){};
+        if(rotate){console.log("rotate");
+            g.redraw = function (){
+                box.rotation.y += 0.01;
+                g.renderer.render(g.scene, g.camera);
+                visualisations.requestAnimationFrame(redraw);
+            }
+        }else{
+            g.redraw = function (){
+                g.renderer.render(g.scene, g.camera);
+                visualisations.requestAnimationFrame(redraw);
+            }
         }
-        redraw();
+        g.redraw();
         
         var pointCache = new PointList(vectors);
         var animationList = new visualisations.AnimationList();
@@ -580,8 +574,9 @@ var ClosestPair = (function() {
         $el.append(buttons["continousPlay"]);
     }
     
-    function init3D(points, size) {
+    function init3D(canvas, points, size) {
         return setup(
+            canvas,
             points,
             new THREE.Box3(
                 new THREE.Vector3(-size, -size, -size),
@@ -589,8 +584,21 @@ var ClosestPair = (function() {
             )
         );
     }
+    
+    function init2D(canvas, points, size) {
+        return setup(
+            canvas,
+            points,
+            new THREE.Box3(
+                new THREE.Vector3(-size, -size, 0.),
+                new THREE.Vector3( size,  size, 0.)
+            ),
+            false
+        );
+    }
 
     return {
+        init2D: init2D,
         init3D: init3D,
         findPair: findPair,
         
