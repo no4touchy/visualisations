@@ -1,5 +1,12 @@
 var ClosestPair = (function() {
-    
+    var COLOURS = {
+        LINE_YELLOW: 0xaaaa00,
+        LINE_GREEN: 0x00ff00,
+        POINT_RED: 0x9e190f,
+        POINT_BLUE: 0x152c6a,
+    };
+
+
     // PointList class - usefull for resorting points
     function PointList(points) {
         /** (array of THREE.Vector3 (augmented with uuid from meshes)) -> ClosestPair.PointList
@@ -65,7 +72,7 @@ var ClosestPair = (function() {
             closestStruct.line = visualisations.vectors2Line(closestStruct.pair);
             closestStruct.line.linewidth = 2.;
             closestStruct.line.material.color.setHex(
-                colour === undefined ? 0xaaaa00 : colour
+                colour === undefined ? COLOURS.LINE_YELLOW : colour
             );
         },
     };
@@ -91,10 +98,10 @@ var ClosestPair = (function() {
         bruteforcePickClosest: function(closestStructs, closest, animationList){
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
-                    closest.line.material.color.setHex(0x00ff00);
+                    closest.line.material.color.setHex(COLOURS.LINE_GREEN);
                 },
                 /*destruct*/ function(g){
-                    closest.line.material.color.setHex(0xaaaa00);
+                    closest.line.material.color.setHex(COLOURS.LINE_YELLOW);
                 }
             ));
         },
@@ -130,17 +137,17 @@ var ClosestPair = (function() {
             
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
-                    prevLine.material.color.setHex(0xaaaa00);
-                    nextLine.material.color.setHex(0x00ff00);
+                    prevLine.material.color.setHex(COLOURS.LINE_YELLOW);
+                    nextLine.material.color.setHex(COLOURS.LINE_GREEN);
                 },
                 /*destruct*/ function(g){
-                    nextLine.material.color.setHex(0xaaaa00);
-                    prevLine.material.color.setHex(0x00ff00);
+                    nextLine.material.color.setHex(COLOURS.LINE_YELLOW);
+                    prevLine.material.color.setHex(COLOURS.LINE_GREEN);
                 }
             ));
         },
         partitionPoints: function(context){
-            var colours = [0x9e190f, 0x152c6a];//[0xff0000, 0x0000ff];
+            var colours = [COLOURS.POINT_RED, COLOURS.POINT_BLUE];//[0xff0000, 0x0000ff];
             var colourCache = {};
             
             // Make meshes for bounding boxes
@@ -172,7 +179,7 @@ var ClosestPair = (function() {
         },
         togglePartitionBoxes: function(indices, context){
             var on = false;
-            var colours = [0xff0000, 0x0000ff];
+            var colours = [COLOURS.POINT_RED, COLOURS.POINT_BLUE, 0xff0000, 0x0000ff];
             var boundingBox, boundingMesh, points;
             context.animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){console.log();
@@ -243,7 +250,7 @@ var ClosestPair = (function() {
             /**
              *  Assume a.distance < b.distance
             **/
-            var colour = [0xffff00, 0x00ff00];
+            var colour = [COLOURS.LINE_YELLOW, COLOURS.LINE_GREEN];
             var lines = [a.line, b.line];
             
             // Change colour to yellow
