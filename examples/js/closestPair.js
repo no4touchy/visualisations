@@ -60,10 +60,19 @@ var ClosestPair = (function() {
         this.divisionMeshes = [];
     }
 
+    var helpers = {
+        createLine: function(closestStruct, colour){
+            closestStruct.line = visualisations.vectors2Line(closestStruct.pair);
+            closestStruct.line.linewidth = 2.;
+            closestStruct.line.material.color.setHex(
+                colour === undefined ? 0xaaaa00 : colour
+            );
+        },
+    };
+
     var animations = {
         bruteforceCreateLine: function(closestStruct){
-            closestStruct.line = visualisations.vectors2Line(closestStruct.pair);
-            closestStruct.line.material.color.setHex(0xaaaa00);
+            helpers.createLine(closestStruct);
         },
         bruteforceAddPairs: function(closestStructs, animationList){
             animationList.addAnimation(new visualisations.AnimationList.Animation(
@@ -92,7 +101,9 @@ var ClosestPair = (function() {
         bruteforceDestroyClosestLines: function(closestArray, closest, animationList){
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
+                    console.log(closest);
                     for(var i = 0;i < closestArray.length;i++){
+                        console.log(i);
                         console.log(closestArray[i]);
                         if(closestArray[i].line.uuid == closest.line.uuid){
                             continue;
@@ -110,23 +121,7 @@ var ClosestPair = (function() {
                 }
             ));
         },
-        
-        // Closest pair bruteforce animations
-        bruteforceAddPair: function(closestStruct, animationList){
-            closestStruct.line = visualisations.vectors2Line(closestStruct.pair);
-            closestStruct.line.material.color.setHex(0xaaaa00);
-            
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){
-                    g.add(closestStruct.line);
-                    console.log(g);
-                    console.log(closestStruct);
-                },
-                /*destruct*/ function(g){
-                    g.remove(closestStruct.line);
-                }
-            ));
-        },
+
         bruteforceSwapClosestLines: function(prevClosest, nextClosest, animationList){
             // Assume nextClosest.dist < prevClosest.line
             
@@ -177,24 +172,46 @@ var ClosestPair = (function() {
         },
         togglePartitionBoxes: function(indices, context){
             var on = false;
+            var colours = [0xff0000, 0x0000ff];
+            var boundingBox, boundingMesh, points;
             context.animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){
+                /*construct*/ function(g){console.log();
                     if(!on){on = true;}else{return;}
                     for(var i = 0;i < indices.length;i++){
-                        if(g.children.indexOf(context.divisionMeshes[indices[i]]) > -1){
-                            g.remove(context.divisionMeshes[indices[i]]);
+                        boundingBox = context.boundingBoxes[indices[i]];
+                        boundingMesh = context.divisionMeshes[indices[i]];
+                        if(g.children.indexOf(boundingMesh) > -1){
+                            g.remove(boundingMesh);
+                            points = context.sortCache.resort(boundingBox, 0);
+                            for(var j = 0;j < points.length;j++){
+                                console.log(points[j]);
+                                points[j].ptr.material.color.setHex(0x000000);
+                            }
                         }else{
-                            g.add(context.divisionMeshes[indices[i]]);
+                            g.add(boundingMesh);
+                            points = context.sortCache.resort(boundingBox, 0);
+                            for(var j = 0;j < points.length;j++){
+                                console.log(points[j]);
+                                points[j].ptr.material.color.setHex(colours[indices[i]]);
+                            }
                         }
                     }
                 },
                 /*destruct*/ function(g){
                     if(on){on = false;}else{return;}
                     for(var i = 0;i < indices.length;i++){
-                        if(g.children.indexOf(context.divisionMeshes[indices[i]]) == -1){
-                            g.add(context.divisionMeshes[indices[i]]);
+                        boundingBox = context.boundingBoxes[indices[i]];
+                        boundingMesh = context.divisionMeshes[indices[i]];
+                        if(g.children.indexOf(boundingMesh) == -1){
+                            g.add(boundingMesh);
+                            for(var point in context.sortCache.resort(boundingBox, 0)){
+                                point.ptr.material.color.setHex(colours[indices[i]]);
+                            }
                         }else{
-                            g.remove(context.divisionMeshes[indices[i]]);
+                            g.remove(boundingMesh);
+                            for(var point in context.sortCache.resort(boundingBox, 0)){
+                                point.ptr.material.color.setHex(0x000000);
+                            }
                         }
                     }
                 }
@@ -207,12 +224,19 @@ var ClosestPair = (function() {
                 console.log(closestStruct);
                 return;
             }
-            animations.bruteforceAddPair(closestStruct, context.animationList);
+            helpers.createLine(closestStruct, context.animationList);
             closestStruct.line.material.color.setHex(0x00ff00);
+            animations.bruteforceAddPairs([closestStruct], context.animationList);
         },
         
         filterClosest: function(closestArray, context){
-            animations.bruteforceDestroyClosestLines(closestArray, context.closest, context.animationList);
+            var cleanArray = [];
+            for(var i = 0;i < closestArray.length;i++){
+                if(closestArray[i].distance != Number.POSITIVE_INFINITY){
+                    cleanArray.push(closestArray[i]);
+                }
+            }
+            animations.bruteforceDestroyClosestLines(cleanArray, context.closest, context.animationList);
         },
         
         pickClosest: function(a, b, animationList){
@@ -377,7 +401,7 @@ var ClosestPair = (function() {
              *  Automatically handles out of bounds errors 
              *  Worst Case: O(1)
             **/
-            var result = {pair: null, distance: Number.POSITIVE_INFINITY,};
+            var result = {pair: null, distance: Number.POSITIVE_INFINITY, line: null};
             try {
                 result = {
                     pair: [a, b],
@@ -437,10 +461,11 @@ var ClosestPair = (function() {
         // ANIMATION IN PROGRESS
         // -> remove divisionMeshes
         var division = [0, 0];
-        animations.togglePartitionBoxes([0, 1], context);
+        animations.togglePartitionBoxes([1], context);
         division[0] = findPair(context.partitionedPoints[0], context.boundingBoxes[0], animationList, sortCache);
-        division[1] = findPair(context.partitionedPoints[1], context.boundingBoxes[1], animationList, sortCache);
         animations.togglePartitionBoxes([0, 1], context);
+        division[1] = findPair(context.partitionedPoints[1], context.boundingBoxes[1], animationList, sortCache);
+        animations.togglePartitionBoxes([0], context);
         
         // Find the closer pair
         var indexOfClosest = division[0].distance < division[1].distance ? 0 : 1;
@@ -508,12 +533,12 @@ var ClosestPair = (function() {
             g.redraw = function (){
                 box.rotation.y += 0.01;
                 g.renderer.render(g.scene, g.camera);
-                visualisations.requestAnimationFrame(redraw);
+                visualisations.requestAnimationFrame(g.redraw);
             }
         }else{
             g.redraw = function (){
                 g.renderer.render(g.scene, g.camera);
-                visualisations.requestAnimationFrame(redraw);
+                visualisations.requestAnimationFrame(g.redraw);
             }
         }
         g.redraw();
