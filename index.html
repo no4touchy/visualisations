@@ -7,7 +7,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="">
         <meta name="author" content="">
-        <title>Template Option for Visualisation</title>
+        <title>Visualisation Project</title>
         <!-- Bootstrap core CSS -->
         <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
         <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
@@ -57,28 +57,15 @@
         
 	        <div class="col-lg-10 col-md-10">
 	            <div class="bs-example bs-example-tabs">
-	                <ul id="myTab" class="nav nav-tabs" role="tablist">
+	                <ul id="tabList" class="nav nav-tabs" role="tablist">
 	                    <li class="active">
-	                        <a href="#demo3d" role="tab" data-toggle="tab">3D Demonstration</a>
-	                    </li>
-	                    <li class="">
-	                        <a href="#sample" role="tab" data-toggle="tab">Code Sample</a>
-	                    </li>
-	                    <li class="">
-	                        <a href="#demo" role="tab" data-toggle="tab">Demo</a>
+	                        <a href="#base" role="tab" data-toggle="tab">base</a>
 	                    </li>
 	                </ul>
-	                <div id="myTabContent" class="tab-content">
-	                    <div class="tab-pane fade active in" id="demo3d">
-	                        
+	                <div id="tabContent" class="tab-content">
+	                    <div class="tab-pane fade active in" id="base">
                             <div class="canvas" style="float: left;width: 800px;height: 800px"></div>
 					        <div class="menu" style="float: right;"></div>
-	                    </div>
-	                    <div class="tab-pane fade" id="sample">
-	                        <p></p>
-	                    </div>
-	                    <div class="tab-pane fade" id="demo">
-	                        <p></p>
 	                    </div>
 	                </div>
 	            </div>
@@ -96,18 +83,22 @@
         <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
         
         <script src="js/visualisations.js"></script>
-        <script src="examples/js/closestPair.js"></script>
-        <script src="examples/js/helper.js"></script>
+        <script src="js/algorithms/closest_pair.js"></script>
+        <script src="js/algorithms/closest_pair_helper.js"></script>
         
         <script type="text/javascript">
-            $('#myTab a').click(function (e) {
+            $('#tabList a').click(function (e) {
                 e.preventDefault();
                 $(this).tab('show');
             });
             
             jQuery.noConflict();
-            var result = ClosestPair.init3D(".canvas", /*points*/25, /*grid size*/10);
-            ClosestPair.makeButtons(result.al, ".menu");
+
+            var graphics = visualisations.threeSetup("#tabContent #base .canvas");
+            window.initVisualisation(graphics);
+
+            //var result = ClosestPair.init3D(".canvas", /*points*/25, /*grid size*/10);
+            //ClosestPair.makeButtons(result.al, ".menu");
         </script>
     </body>
 

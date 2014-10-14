@@ -498,12 +498,11 @@ var ClosestPair = (function() {
         return context.closest;//.distance < middleClosest.distance ? context.closest : middleClosest;
     }
 
-    function setup(canvas, numPoints, boundingBox, rotate) {
-        /** (string, integer, THREE.Box3, bool) -> Null
+    function setup(g, numPoints, boundingBox, rotate) {
+        /** (array of ThreeJS objects, integer, THREE.Box3, bool) -> Null
          * 
         **/
-        console.log(rotate);
-        if(rotate === undefined){rotate = true;}console.log(rotate);
+        if(rotate === undefined){rotate = true;}
         // Find the length of the bounding box on each axis
         var length = new THREE.Vector3(
             Math.abs(boundingBox.max.getComponent(0) - boundingBox.min.getComponent(0)),
@@ -513,12 +512,12 @@ var ClosestPair = (function() {
         // Generate random points inside bounding box
         var points = [], vectors = [];
         var box = new THREE.Object3D();
-        var random = function() {return Math.floor(Math.random() * 1000) / 1000;};
+        var random = function(i) {return Math.floor(Math.random() * i * 1000) / 1000;};
         for (var i = 0;i < numPoints;i++) {
             var vector = new THREE.Vector3(
-                random() * length.getComponent(0) + boundingBox.min.getComponent(0),
-                random() * length.getComponent(1) + boundingBox.min.getComponent(1),
-                random() * length.getComponent(2) + boundingBox.min.getComponent(2)
+                random(length.getComponent(0)) + boundingBox.min.getComponent(0),
+                random(length.getComponent(1)) + boundingBox.min.getComponent(1),
+                random(length.getComponent(2)) + boundingBox.min.getComponent(2)
             );
             var point = visualisations.vector2Point(vector);
             //vector.uuid = point.uuid;
@@ -529,14 +528,14 @@ var ClosestPair = (function() {
         }
         
         // Initialize graphics
-        var g = visualisations.threeSetup(canvas);
+        //var g = visualisations.threeSetup(canvas);
         
         // Create box and directional lines
         g.scene.add(box);
         
         // Redraw function
         g.redraw = function(){};
-        if(rotate){console.log("rotate");
+        if(rotate){
             g.redraw = function (){
                 box.rotation.y += 0.01;
                 g.renderer.render(g.scene, g.camera);
@@ -574,18 +573,18 @@ var ClosestPair = (function() {
         var buttonsData = [
             ["<<", "backward", function(){animationList.previousAnimation();}],
             [">>", "forward", function(){animationList.nextAnimation();}],
-            [">", "continousPlay", function(){
+            ["Play", "continousPlay", function(){
                 var $this = jQuery(this);
                 animationList.finishCallback = function(){
-                        $this.text(">");
+                        $this.text("Play");
                         animationList.playing = false;
                 };
                 switch($this.text()){
-                    case ">": // Curently not playing
-                        $this.text("||");
+                    case "Play": // Curently not playing
+                        $this.text("Stop");
                         animationList.nextAnimationLoop();
                         break;
-                    case "||": // Currently not playing
+                    case "Stop": // Currently not playing
                     default: // Weird state
                         animationList.finishCallback();
                         break;
@@ -601,14 +600,27 @@ var ClosestPair = (function() {
                 click: buttonsData[i][2],
             });
         }
-        
-        $el.append(buttons["backward"]).append(buttons["forward"]).append("<br />");
+
+        buttons["timeout"] = jQuery("<input/>", {
+            type: "text",
+            name: "timeout",
+            maxlength: 4,
+            val: animationList.timeout,
+        });
+        buttons["timeout"].attr("size", 4);
+        buttons["timeout"].change(function(e){
+            animationList.timeout = Number.parseInt(buttons["timeout"].val());
+        });
+
+        $el.append(buttons["backward"]).append(" ");
+        $el.append(buttons["forward"]).append("<br />");
+        $el.append(buttons["timeout"]).append(" ");
         $el.append(buttons["continousPlay"]);
     }
     
-    function init3D(canvas, points, size) {
+    function init3D(graphics, points, size) {
         return setup(
-            canvas,
+            graphics,
             points,
             new THREE.Box3(
                 new THREE.Vector3(-size, -size, -size),
@@ -617,9 +629,9 @@ var ClosestPair = (function() {
         );
     }
     
-    function init2D(canvas, points, size) {
+    function init2D(graphics, points, size) {
         return setup(
-            canvas,
+            graphics,
             points,
             new THREE.Box3(
                 new THREE.Vector3(-size, -size, 0.),
