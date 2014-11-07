@@ -1,7 +1,7 @@
 var ClosestPair = (function() {
     var COLOURS = {
         LINE_YELLOW: 0xaaaa00,
-        LINE_GREEN: 0x00ff00,
+        LINE_ORANGE: 0xff9900,
         POINT_RED: 0x9e190f,
         POINT_BLUE: 0x152c6a,
     };
@@ -98,7 +98,7 @@ var ClosestPair = (function() {
         bruteforcePickClosest: function(closestStructs, closest, animationList){
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
-                    closest.line.material.color.setHex(COLOURS.LINE_GREEN);
+                    closest.line.material.color.setHex(COLOURS.LINE_ORANGE);
                 },
                 /*destruct*/ function(g){
                     closest.line.material.color.setHex(COLOURS.LINE_YELLOW);
@@ -138,11 +138,11 @@ var ClosestPair = (function() {
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){
                     prevLine.material.color.setHex(COLOURS.LINE_YELLOW);
-                    nextLine.material.color.setHex(COLOURS.LINE_GREEN);
+                    nextLine.material.color.setHex(COLOURS.LINE_ORANGE);
                 },
                 /*destruct*/ function(g){
                     nextLine.material.color.setHex(COLOURS.LINE_YELLOW);
-                    prevLine.material.color.setHex(COLOURS.LINE_GREEN);
+                    prevLine.material.color.setHex(COLOURS.LINE_ORANGE);
                 }
             ));
         },
@@ -183,19 +183,27 @@ var ClosestPair = (function() {
             var boundingBox, boundingMesh, points;
             context.animationList.addAnimation(new visualisations.AnimationList.Animation(
                 /*construct*/ function(g){console.log();
+                    // Toggle flag
                     if(!on){on = true;}else{return;}
+                    // For each indices
                     for(var i = 0;i < indices.length;i++){
+                        // Current box and mesh
                         boundingBox = context.boundingBoxes[indices[i]];
                         boundingMesh = context.divisionMeshes[indices[i]];
+                        // If mesh is already being drawn
                         if(g.children.indexOf(boundingMesh) > -1){
                             g.remove(boundingMesh);
+                            // Find points
                             points = context.sortCache.resort(boundingBox, 0);
+                            // Recolour points
                             for(var j = 0;j < points.length;j++){
                                 console.log(points[j]);
                                 points[j].ptr.material.color.setHex(0x000000);
                             }
+                        // If mesh NOT drawn
                         }else{
                             g.add(boundingMesh);
+                            // Find points
                             points = context.sortCache.resort(boundingBox, 0);
                             for(var j = 0;j < points.length;j++){
                                 console.log(points[j]);
@@ -209,15 +217,19 @@ var ClosestPair = (function() {
                     for(var i = 0;i < indices.length;i++){
                         boundingBox = context.boundingBoxes[indices[i]];
                         boundingMesh = context.divisionMeshes[indices[i]];
+                        // If mesh NOT being drawn
                         if(g.children.indexOf(boundingMesh) == -1){
                             g.add(boundingMesh);
-                            for(var point in context.sortCache.resort(boundingBox, 0)){
-                                point.ptr.material.color.setHex(colours[indices[i]]);
+                            points = context.sortCache.resort(boundingBox, 0);
+                            for(var j = 0;j < points.length;j++){
+                                points[j].ptr.material.color.setHex(colours[indices[i]]);
                             }
+                        // If mesh is being drawn
                         }else{
                             g.remove(boundingMesh);
-                            for(var point in context.sortCache.resort(boundingBox, 0)){
-                                point.ptr.material.color.setHex(0x000000);
+                            points = context.sortCache.resort(boundingBox, 0);
+                            for(var j = 0;j < points.length;j++){
+                                points[j].ptr.material.color.setHex(0x000000);
                             }
                         }
                     }
@@ -250,7 +262,7 @@ var ClosestPair = (function() {
             /**
              *  Assume a.distance < b.distance
             **/
-            var colour = [COLOURS.LINE_YELLOW, COLOURS.LINE_GREEN];
+            var colour = [COLOURS.LINE_YELLOW, COLOURS.LINE_ORANGE];
             var lines = [a.line, b.line];
             
             // Change colour to yellow
@@ -264,7 +276,7 @@ var ClosestPair = (function() {
                     lines[1].material.color.setHex(colour[1]);
                 }
             ));
-            // Change colour of shortest back to green, and remove the larger pair
+            // Change colour of shortest back to orange, and remove the larger pair
             animationList.addAnimation(new visualisations.AnimationList.Animation(
                 function(g){console.log(lines);
                     lines[0].material.color.setHex(colour[1]);
@@ -332,9 +344,15 @@ var ClosestPair = (function() {
             }
         }
         
+        // Add all lines
         animations.bruteforceAddPairs(closestArray, animationList);
-        animations.bruteforcePickClosest(closestArray, closest, animationList);
-        animations.bruteforceDestroyClosestLines(closestArray, closest, animationList);
+        if(points.length == 2){ // Only one line
+            console.log(closest);
+            closest.line.material.color.setHex(COLOURS.LINE_ORANGE);
+        }else{ // Two lines
+            animations.bruteforcePickClosest(closestArray, closest, animationList);
+            animations.bruteforceDestroyClosestLines(closestArray, closest, animationList);
+        }
         
         // Return closest point
         return closest;
@@ -354,8 +372,8 @@ var ClosestPair = (function() {
                             context.sortedPoints[Math.ceil(context.medianIndex)].getComponent(context.divisionAxis)) / 2;
         // Make new bounding boxes
         context.boundingBoxes = [context.boundingBox.clone(), context.boundingBox.clone()];
-        context.boundingBoxes[0].max.setComponent(context.divisionAxis, context.median);
-        context.boundingBoxes[1].min.setComponent(context.divisionAxis, context.median);
+        context.boundingBoxes[0].max.setComponent(context.divisionAxis, context.median - 1e-3);
+        context.boundingBoxes[1].min.setComponent(context.divisionAxis, context.median - 1e-3);
         // Partition points
         context.partitionedPoints = [[], []];
         for (var i = 0;i < context.sortedPoints.length;i++) {
@@ -609,13 +627,21 @@ var ClosestPair = (function() {
         });
         buttons["timeout"].attr("size", 4);
         buttons["timeout"].change(function(e){
-            animationList.timeout = Number.parseInt(buttons["timeout"].val());
+            // Parse int
+            var timeout = Number.parseInt(buttons["timeout"].val());
+            // Low limit
+            if(timeout < 300){
+                timeout = 300;
+                buttons["timeout"].val(timeout);
+            }
+            // Update timeout
+            animationList.timeout = timeout;
         });
 
         $el.append(buttons["backward"]).append(" ");
+        $el.append(buttons["continousPlay"]).append(" ");
         $el.append(buttons["forward"]).append("<br />");
-        $el.append(buttons["timeout"]).append(" ");
-        $el.append(buttons["continousPlay"]);
+        $el.append("Timeout: ").append(buttons["timeout"]).append(" ");
     }
     
     function init3D(graphics, points, size) {
