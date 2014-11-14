@@ -487,9 +487,13 @@ var ClosestPair = (function() {
         // -> remove divisionMeshes
         var division = [0, 0];
         animations.togglePartitionBoxes([1], context);
+        animations.togglePartitionBoxes([1], context);
         division[0] = findPair(context.partitionedPoints[0], context.boundingBoxes[0], animationList, sortCache);
+        animations.togglePartitionBoxes([1], context);
         animations.togglePartitionBoxes([0, 1], context);
+        animations.togglePartitionBoxes([0], context);
         division[1] = findPair(context.partitionedPoints[1], context.boundingBoxes[1], animationList, sortCache);
+        animations.togglePartitionBoxes([0], context);
         animations.togglePartitionBoxes([0], context);
         
         // Find the closer pair
