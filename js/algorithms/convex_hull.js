@@ -1,5 +1,4 @@
 var ConvexHull = (function(){
-
     function point_below_line(line, point){
         /*  (THREE.Vector2[2], THREE.Vector2) -> bool
          *  Assume: line[1].x > line[0].x
@@ -35,29 +34,48 @@ var ConvexHull = (function(){
             }
         }
 
-        lower_tangent = [a, b];
-        upper_tangent = [a, b];
-
         // Find lower_tangent
         action = true;
+        lower_tangent = [a, b];
         while(action){
             action = false;
-
-            while(point_below_line(lower_tangent, a.next)){
-                a = a.next;
+			// Check H_a clockwise
+            while(point_below_line(lower_tangent, lower_tangent[0].prev)){
+                lower_tangent[0] = lower_tangent[0].prev;
                 action = true;
             }
-
-            while(point_below_line(lower_tangent, b.prev)){
-                b = b.prev;
+			// Check H_b counter-clockwise
+            while(point_below_line(lower_tangent, lower_tangent[1].next)){
+                lower_tangent[1] = lower_tangent[1].next;
                 action = true;
             }
         }
 
-        // Find upper tangent
-        // Same as above
+        // Find upper_tangent
+        action = true;
+        upper_tangent = [a, b];
+        while(action){
+            action = false;
+			// Check H_a counter-clockwise
+            while(!point_below_line(upper_tangent, upper_tangent[0].next)){
+                upper_tangent[0] = upper_tangent[0].next;
+                action = true;
+            }
+			// Check H_b clockwise
+            while(point_below_line(upper_tangent, upper_tangent[1].prev)){
+                upper_tangent[1] = upper_tangent[1].prev;
+                action = true;
+            }
+        }
+		
+		// Stitch tangents together
+		upper_tangent[0].prev = upper_tangent[1];
+		upper_tangent[1].next = upper_tangent[0];
+		lower_tangent[0].next = lower_tangent[1];
+		lower_tangent[1].prev = lower_tangent[0];
 
         // Merge and return
+		return H_b;
     }
 
     function find_convex_hull_2D(points){
@@ -73,14 +91,30 @@ var ConvexHull = (function(){
 
         // Bruteforce
         if(points.length <= 3){
-            // Link all the points together
-            for(var i = 0;i < points.length;i++){
-                var j = (i + 1) % points.length;
-                points[i].next = points[j];
-                points[j].prev = points[i]
-            }
-            // Return head point
-            return points[0];
+			if(points.length == 2){ // The simple case
+				points[2].next = points[1];
+				points[2].prev = points[1];
+				points[1].next = points[2];
+				points[1].prev = points[2];
+			}else if(){ // The not so simple case
+				var max_point = (points[0].y < points[1].y) ? 1 : 0;
+				var min_point = 1 - max_point;
+				
+				// Connect last with max_point
+				points[3].next = points[max_point];
+				points[max_point].prev = points[3];
+				
+				// Connect max_point to min_point
+				points[max_point].next = points[min_point];
+				points[min_point].prev = points[max_point];
+				
+				// Connect min_point to last
+				points[min_point].next = points[3];
+				points[3].prev = points[min_point];
+			}
+			
+            // Return head point, the rightmost point
+            return points[points.length - 1];
         }
 
         // Split points into 2 seperate parts
@@ -93,8 +127,10 @@ var ConvexHull = (function(){
         var H_b = find_convex_hull_2D(points_b);
 
         // Merge
-        merge_convex_hull_2D(H_a, H_b);
+        var H = merge_convex_hull_2D(H_a, H_b);
     
+		// Return convex hull
+		return H;
     }
     /* --- END Convex Hull 2D implementation --- */
 
@@ -114,7 +150,7 @@ var ConvexHull = (function(){
         }
 
         // Find convex hull
-        find_convex_hull_2D(spoints);
+        var CH = find_convex_hull_2D(spoints);
     }
 
     return {};
