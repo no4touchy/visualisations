@@ -1,681 +1,155 @@
-var ClosestPair = (function() {
-    var COLOURS = {
-        LINE_YELLOW: 0xaaaa00,
-        LINE_ORANGE: 0xff9900,
-        POINT_RED: 0x9e190f,
-        POINT_BLUE: 0x152c6a,
-    };
+var ClosestPair = {};
 
+ClosestPair.algorithm = (function(){
+    // Cached variables
+    var animationList;  // AnimationList object
+    var boundingBox;    // Bounding box that encompases all points
+    var allPoints;      // All point store
+    var sortPoints;     // SortedPoints object
+    var objectCache;    // Cache of graphics objects
 
-    // PointList class - usefull for resorting points
-    function PointList(points) {
-        /** (array of THREE.Vector3 (augmented with uuid from meshes)) -> ClosestPair.PointList
-         *  A point list object, usefull for resorting previously sorted lists of points
-         *  O(n ln n) time
-        **/
-        var sort = function(axis){
-            return points.slice(0).sort(function(a, b) {
+    /* --- START SortedPoints --- */
+    function SortedPoints(points){
+        /*  Constructor for SortedPoints
+         *  (array of THREE.Vector3) -> SortedPoints
+         *  Runtime: O(n ln n)
+         */
+
+        // Define sorting function
+        var sorting = function(axis){
+            return points.sort(function(a, b){
                 return a.getComponent(axis) - b.getComponent(axis);
             });
         };
-        this.sorted = [
-            sort(0),
-            sort(1),
-            sort(2),
+
+        // Sort the points and save them
+        this.points = [
+            sorting(0),
+            sorting(1),
+            sorting(2)
         ];
     }
-    PointList.prototype.resort = function(boundingBox, axis) {
-        /** (THREE.Box3, integer) -> Object{uuid: sortedIndex}
-         *  Find the points in the bounding box along the axis.
-         *  O(n) time
-        **/
-        return this.sorted[axis].filter(function (n) {
-            return boundingBox.containsPoint(n);
+    SortedPoints.prototype.resort = function(boundingBox, axis){
+        /*  Using the presorted lists of points, return an array of points sorted on some axis
+         *  (THREE.Box3, int) -> array of THREE.Vector3
+         *  Runtime: O(n)
+         */
+        return this.points[axis].filter(function(point){
+            return boundingBox.contains(point);
         });
-    };
-
-    // FindPairContext class - usefull for sharing data across different calls
-    function FindPairContext(points, boundingBox, animationList, sortCache) {
-        /** (array of THREE.Vector3, THREE.Box3, visualisations.AnimationList, PointList) -> Object
-         *  Creates a new context object so as to reduce redundancies
-         *  O(1) time
-        **/
-        
-        // Vanilla variables, provided by function call
-        this.points = points;
-        this.boundingBox = boundingBox;
-        this.animationList = animationList;
-        this.sortCache = sortCache;
-        
-        // Extra storage
-        this.closest = null;
-        
-        // Variables created by partitionPoints call
-        this.divisionAxis = -1;
-        this.sortedPoints = null;
-        this.medianIndex = -1;
-        this.median = Number.NaN;
-        this.boundingBoxes = null;
-        this.partitionedPoints = null;
-        
-        // Variables created by partitionMiddle call
-        this.middleBoxes = null;
-        this.middlePoints = null;
-        this.secondDivisionAxis = -1;
-        
-        // Meshes
-        this.divisionMeshes = [];
     }
+    /* --- END SortedPoints*/
 
-    var helpers = {
-        createLine: function(closestStruct, colour){
-            closestStruct.line = visualisations.vectors2Line(closestStruct.pair);
-            closestStruct.line.linewidth = 2.;
-            closestStruct.line.material.color.setHex(
-                colour === undefined ? COLOURS.LINE_YELLOW : colour
-            );
-        },
-    };
-
-    var animations = {
-        bruteforceCreateLine: function(closestStruct){
-            helpers.createLine(closestStruct);
-        },
-        bruteforceAddPairs: function(closestStructs, animationList){
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){
-                    for(var i = 0;i < closestStructs.length;i++){
-                        g.add(closestStructs[i].line);
-                    }
-                },
-                /*destruct*/ function(g){
-                    for(var i = 0;i < closestStructs.length;i++){
-                        g.remove(closestStructs[i].line);
-                    }
-                }
-            ));
-        },
-        bruteforcePickClosest: function(closestStructs, closest, animationList){
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){
-                    closest.line.material.color.setHex(COLOURS.LINE_ORANGE);
-                },
-                /*destruct*/ function(g){
-                    closest.line.material.color.setHex(COLOURS.LINE_YELLOW);
-                }
-            ));
-        },
-        bruteforceDestroyClosestLines: function(closestArray, closest, animationList){
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){
-                    console.log(closest);
-                    for(var i = 0;i < closestArray.length;i++){
-                        console.log(i);
-                        console.log(closestArray[i]);
-                        if(closestArray[i].line.uuid == closest.line.uuid){
-                            continue;
-                        }
-                        g.remove(closestArray[i].line);
-                    }
-                },
-                /*destruct*/ function(g){
-                    for(var i = 0;i < closestArray.length;i++){
-                        if(closestArray[i].line.uuid == closest.line.uuid){
-                            continue;
-                        }
-                        g.add(closestArray[i].line);
-                    }
-                }
-            ));
-        },
-
-        bruteforceSwapClosestLines: function(prevClosest, nextClosest, animationList){
-            // Assume nextClosest.dist < prevClosest.line
-            
-            var prevLine = prevClosest.line;
-            var nextLine = nextClosest.line;
-            
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){
-                    prevLine.material.color.setHex(COLOURS.LINE_YELLOW);
-                    nextLine.material.color.setHex(COLOURS.LINE_ORANGE);
-                },
-                /*destruct*/ function(g){
-                    nextLine.material.color.setHex(COLOURS.LINE_YELLOW);
-                    prevLine.material.color.setHex(COLOURS.LINE_ORANGE);
-                }
-            ));
-        },
-        partitionPoints: function(context){
-            var colours = [COLOURS.POINT_RED, COLOURS.POINT_BLUE];//[0xff0000, 0x0000ff];
-            var colourCache = {};
-            
-            // Make meshes for bounding boxes
-            context.divisionMeshes.push(visualisations.boundingBox2Mesh(context.boundingBoxes[0], colours[0]));
-            context.divisionMeshes.push(visualisations.boundingBox2Mesh(context.boundingBoxes[1], colours[1]));
-        
-            var construct = function(g){
-                g.add(context.divisionMeshes[0]);
-                g.add(context.divisionMeshes[1]);
-                for(var i = 0;i < 2;i++){
-                    for(var j = 0;j < context.partitionedPoints[i].length;j++){
-                        colourCache[context.partitionedPoints[i][j].ptr.uuid] = context.partitionedPoints[i][j].ptr.material.color.getHex();
-                        context.partitionedPoints[i][j].ptr.material.color.setHex(colours[i]);
-                    }
-                }
-            };
-            
-            var destruct = function(g){
-                g.remove(context.divisionMeshes[0]);
-                g.remove(context.divisionMeshes[1]);
-                for(var i = 0;i < 2;i++){
-                    for(var j = 0;j < context.partitionedPoints[i].length;j++){
-                        context.partitionedPoints[i][j].ptr.material.color.setHex(colourCache[context.partitionedPoints[i][j].ptr.uuid]);
-                    }
-                }
-            };
-            
-            context.animationList.addAnimation(new visualisations.AnimationList.Animation(construct, destruct));
-        },
-        togglePartitionBoxes: function(indices, context){
-            var on = false;
-            var colours = [COLOURS.POINT_RED, COLOURS.POINT_BLUE, 0xff0000, 0x0000ff];
-            var boundingBox, boundingMesh, points;
-            context.animationList.addAnimation(new visualisations.AnimationList.Animation(
-                /*construct*/ function(g){console.log();
-                    // Toggle flag
-                    if(!on){on = true;}else{return;}
-                    // For each indices
-                    for(var i = 0;i < indices.length;i++){
-                        // Current box and mesh
-                        boundingBox = context.boundingBoxes[indices[i]];
-                        boundingMesh = context.divisionMeshes[indices[i]];
-                        // If mesh is already being drawn
-                        if(g.children.indexOf(boundingMesh) > -1){
-                            g.remove(boundingMesh);
-                            // Find points
-                            points = context.sortCache.resort(boundingBox, 0);
-                            // Recolour points
-                            for(var j = 0;j < points.length;j++){
-                                console.log(points[j]);
-                                points[j].ptr.material.color.setHex(0x000000);
-                            }
-                        // If mesh NOT drawn
-                        }else{
-                            g.add(boundingMesh);
-                            // Find points
-                            points = context.sortCache.resort(boundingBox, 0);
-                            for(var j = 0;j < points.length;j++){
-                                console.log(points[j]);
-                                points[j].ptr.material.color.setHex(colours[indices[i]]);
-                            }
-                        }
-                    }
-                },
-                /*destruct*/ function(g){
-                    if(on){on = false;}else{return;}
-                    for(var i = 0;i < indices.length;i++){
-                        boundingBox = context.boundingBoxes[indices[i]];
-                        boundingMesh = context.divisionMeshes[indices[i]];
-                        // If mesh NOT being drawn
-                        if(g.children.indexOf(boundingMesh) == -1){
-                            g.add(boundingMesh);
-                            points = context.sortCache.resort(boundingBox, 0);
-                            for(var j = 0;j < points.length;j++){
-                                points[j].ptr.material.color.setHex(colours[indices[i]]);
-                            }
-                        // If mesh is being drawn
-                        }else{
-                            g.remove(boundingMesh);
-                            points = context.sortCache.resort(boundingBox, 0);
-                            for(var j = 0;j < points.length;j++){
-                                points[j].ptr.material.color.setHex(0x000000);
-                            }
-                        }
-                    }
-                }
-            ));
-        },
-        
-        middleAddPair: function(closestStruct, context){
-            if(closestStruct.distance == Number.POSITIVE_INFINITY){
-                console.log("Error");
-                console.log(closestStruct);
-                return;
-            }
-            helpers.createLine(closestStruct, context.animationList);
-            closestStruct.line.material.color.setHex(0x00ff00);
-            animations.bruteforceAddPairs([closestStruct], context.animationList);
-        },
-        
-        filterClosest: function(closestArray, context){
-            var cleanArray = [];
-            for(var i = 0;i < closestArray.length;i++){
-                if(closestArray[i].distance != Number.POSITIVE_INFINITY){
-                    cleanArray.push(closestArray[i]);
-                }
-            }
-            animations.bruteforceDestroyClosestLines(cleanArray, context.closest, context.animationList);
-        },
-        
-        pickClosest: function(a, b, animationList){
-            /**
-             *  Assume a.distance < b.distance
-            **/
-            var colour = [COLOURS.LINE_YELLOW, COLOURS.LINE_ORANGE];
-            var lines = [a.line, b.line];
-            
-            // Change colour to yellow
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                function(g){
-                    lines[0].material.color.setHex(colour[0]);
-                    lines[1].material.color.setHex(colour[0]);
-                },
-                function(g){
-                    lines[0].material.color.setHex(colour[1]);
-                    lines[1].material.color.setHex(colour[1]);
-                }
-            ));
-            // Change colour of shortest back to orange, and remove the larger pair
-            animationList.addAnimation(new visualisations.AnimationList.Animation(
-                function(g){console.log(lines);
-                    lines[0].material.color.setHex(colour[1]);
-                    g.remove(lines[1]);
-                },
-                function(g){console.log(lines);
-                    lines[0].material.color.setHex(colour[0]);
-                    g.add(lines[1]);
-                }
-            ));
-        },
-    };
-
-    function findMaxAxis(box) {
-        /** (THREE.Box3) -> integer
-         *  Fix axis with largest dimensions, ignoring some axis
-         *  O(1) time
-        **/
-        // Find dimensions of bounding box
-        var dim = [];
-        for(var i = 0;i < 3;i++) {
-            dim.push(Math.abs(box.max.getComponent(i) - box.min.getComponent(i)));
-        }
-        // Find axis with spanning size
-        return dim.indexOf(Math.max.apply(Math, dim));
-    }
-
-    function findPairBruteforce(points, boundingBox, animationList){
-        /** (array of THREE.Vector3, THREE.Box3, visualisations.AnimationList) -> 
-         *  Find the pair of points with the smallest distance, max 3 points
-         *  O(1) time
-        **/
-        var findClosest = function(points, i, j) {
-            /** (Objects, array of THREE.Vector3, integer, integer) -> null
-             * 
-            **/
-            // Create a temporary structure
-            var closestStruct = {
-                pair: [points[i], points[j]],
-                distance: points[i].distanceTo(points[j]),
-                line: null
-            };
-            animations.bruteforceCreateLine(closestStruct);
-            return closestStruct;
-        };
-        
-        // Declare default
-        var closest = null;
-        var closestArray = [];
-        
-        // Bound check in case >= 2 points
-        if(points.length > 1) {
-            closestArray.push(findClosest(points, 0, 1));
-        }
-        // Bound check in case = 3 points
-        if(points.length == 3) {
-            closestArray.push(findClosest(points, 0, 2));
-            closestArray.push(findClosest(points, 1, 2));
-        }
-        
-        closest = closestArray[0];
-        for(var i = 1;i < closestArray.length;i++){
-            if(closestArray[i].distance < closest.distance){
-                closest = closestArray[i];
-            }
-        }
-        
-        // Add all lines
-        animations.bruteforceAddPairs(closestArray, animationList);
-        if(points.length == 2){ // Only one line
-            console.log(closest);
-            closest.line.material.color.setHex(COLOURS.LINE_ORANGE);
-        }else{ // Two lines
-            animations.bruteforcePickClosest(closestArray, closest, animationList);
-            animations.bruteforceDestroyClosestLines(closestArray, closest, animationList);
-        }
-        
-        // Return closest point
-        return closest;
-    }
+    /* --- START main logic --- */
+    function findPairMaxAxis(boundingBox){
+        /*  Returns the axis with the greatest dimension
+         *  (THREE.Box3) -> int
+         *  Runtime: O(1)
+         */
     
-    function partitionPoints(context) {
-        /** (FindPairContext) -> null
-         *  Partition points in 2 distinct divisions and update the context
-         *  O(n) time
-        **/
-        // Find axis with maximum distance and resort points on that axis
-        context.divisionAxis = findMaxAxis(context.boundingBox);
-        context.sortedPoints = context.sortCache.resort(context.boundingBox, context.divisionAxis);
-        // Find median
-        context.medianIndex = context.sortedPoints.length / 2;
-        context.median = (  context.sortedPoints[Math.floor(context.medianIndex)].getComponent(context.divisionAxis) +
-                            context.sortedPoints[Math.ceil(context.medianIndex)].getComponent(context.divisionAxis)) / 2;
-        // Make new bounding boxes
-        context.boundingBoxes = [context.boundingBox.clone(), context.boundingBox.clone()];
-        context.boundingBoxes[0].max.setComponent(context.divisionAxis, context.median - 1e-3);
-        context.boundingBoxes[1].min.setComponent(context.divisionAxis, context.median - 1e-3);
-        // Partition points
-        context.partitionedPoints = [[], []];
-        for (var i = 0;i < context.sortedPoints.length;i++) {
-            var partition = context.sortedPoints[i].getComponent(context.divisionAxis) < context.median ? 0 : 1;
-            context.partitionedPoints[partition].push(context.sortedPoints[i]);
-        }
-        // Bind animation
-        animations.partitionPoints(context);
-    }
-    
-    function partitionMiddlePoints(context) {
-        /** (FindPairContext) -> null
-         *  Partition points in 2 distinct middle divisions and update the context
-         *  O(n) time
-        **/
-        
-        // Make new middle bouding boxes
-        context.middleBoxes = [context.boundingBoxes[0].clone(), context.boundingBoxes[1].clone()];
-        context.middleBoxes[0].min.setComponent(context.divisionAxis, context.median - context.closest.distance);
-        context.middleBoxes[1].max.setComponent(context.divisionAxis, context.median + context.closest.distance);
-        // Find closest pair in the middle partitions
-        context.secondDivisionAxis = (context.divisionAxis + 1) % 3;
-        context.middlePoints = [
-            context.sortCache.resort(context.middleBoxes[0], context.divisionAxis),
-            context.sortCache.resort(context.middleBoxes[1], context.divisionAxis)
-        ];
-        
-        /*for(var i = 0;i < context.middlePoints[0].length;i++) {
-            for(var j = 0;j < context.middlePoints[1].length;j++) {
-                //console.log([context.middlePoints[0][i].uuid, context.middlePoints[1][j].uuid]);
-                if(context.middlePoints[0][i].uuid === context.middlePoints[1][j].uuid) {
-                    console.log(context.middleBoxes);
-                    console.log(context.middlePoints[0][i]);
-                    console.log("Closest distance:" + context.closest.distance);
-                    console.log("Median:" + context.median);
-                    console.log("Division Axis:" + context.divisionAxis);
-                    //throw "Point in both lists";
-                }
-            }
-        }*/
-    }
-
-    function findMiddlePair(points, axis, animationList) {
-        /** (array of 2 arrays of THREE.Vector3, integer, visualisations.AnimationList) ->
-         *  Find closest pair in middle partition
-         *  O(n) time
-        **/
-        var analyzePoints = function (a, b) {
-            /** (THREE.Vector3, THREE.Vector3) -> Object
-             *  Automatically handles out of bounds errors 
-             *  Worst Case: O(1)
-            **/
-            var result = {pair: null, distance: Number.POSITIVE_INFINITY, line: null};
-            try {
-                result = {
-                    pair: [a, b],
-                    distance: a.distanceTo(b),
-                };
-            } catch(err) { 
-            }
-            // Quick fix to make sure points do not end up being compared with themselves
-            if(result.pair !== null && (result.pair[0].ptr.uuid == result.pair[1].ptr.uuid)){
-                result.distance = Number.POSITIVE_INFINITY;
-                console.log(result.pair[0].ptr.uuid + " == " + result.pair[1].ptr.uuid);
-            }
-            return result;
-        };
-        var comparePairs = function(a, b){
-            /** (Object, Object) -> Object
-             *  Returns the object pair with the smallest distance
-             *  Worst Case: O(1)
-            **/
-            return a.distance < b.distance ? a : b;
-        };
-        var closest = {pair: null, distance: Number.POSITIVE_INFINITY,};
-        var i = 0, j = 0, m = Math.min(points[0].length, points[1].length);
-        while (i < m && j < m) {
-            var current = analyzePoints(points[0][i], points[1][j]), next;
-            if (points[0][i].getComponent(axis) >= points[1][j].getComponent(axis)) {
-                next = analyzePoints(points[0][i], points[1][j + 1]);
-                i++;
-            } else {
-                next = analyzePoints(points[0][i + 1], points[1][j]);
-                j++;
-            }
-            closest = comparePairs(closest, comparePairs(current, next));
-        }
-        return closest;
-    }
-
-    function findPair(points, boundingBox, animationList, sortCache) {
-        /** (array of THREE.Vector3, THREE.Box3, visualisations.AnimationList, PointList) -> 
-         *  Find the pair of points with the smallest distance
-         *  O(n ln n) time
-        **/
-        
-        // 3 or less points
-        if (points.length <= 3) {
-            return findPairBruteforce(points, boundingBox, animationList);
-        }
-        
-        // Create a new context
-        var context = new FindPairContext(points, boundingBox, animationList, sortCache);
-        
-        // Partition points
-        // ANIMATION DONE
-        partitionPoints(context);
-        
-        // Recursively solve problem
-        // ANIMATION IN PROGRESS
-        // -> remove divisionMeshes
-        var division = [0, 0];
-        animations.togglePartitionBoxes([1], context);
-        animations.togglePartitionBoxes([1], context);
-        division[0] = findPair(context.partitionedPoints[0], context.boundingBoxes[0], animationList, sortCache);
-        animations.togglePartitionBoxes([1], context);
-        animations.togglePartitionBoxes([0, 1], context);
-        animations.togglePartitionBoxes([0], context);
-        division[1] = findPair(context.partitionedPoints[1], context.boundingBoxes[1], animationList, sortCache);
-        animations.togglePartitionBoxes([0], context);
-        animations.togglePartitionBoxes([0], context);
-        
-        // Find the closer pair
-        var indexOfClosest = division[0].distance < division[1].distance ? 0 : 1;
-        context.closest = division[indexOfClosest];
-        //animations.pickClosest(division[indexOfClosest], division[indexOfClosest === 0 ? 1 : 0], animationList);
-        
-        // Partition middle points
-        partitionMiddlePoints(context);
-        
-        // Find points with minimum distance in the middle section
-        var middleClosest = findMiddlePair(context.middlePoints, context.divisionAxis, animationList);
-        animations.middleAddPair(middleClosest, context);
-        division[2] = middleClosest;
-        
-        // Find the closest points
-        indexOfClosest = division[2].distance < division[indexOfClosest].distance ? 2 : indexOfClosest;
-        context.closest = division[indexOfClosest];
-        animations.filterClosest(division, context);
-        
-        animations.togglePartitionBoxes([0, 1], context);
-        
-        // Return closer pair
-        return context.closest;//.distance < middleClosest.distance ? context.closest : middleClosest;
-    }
-
-    function setup(g, numPoints, boundingBox, rotate) {
-        /** (array of ThreeJS objects, integer, THREE.Box3, bool) -> Null
-         * 
-        **/
-        if(rotate === undefined){rotate = true;}
-        // Find the length of the bounding box on each axis
-        var length = new THREE.Vector3(
+        // Calculate dimensions
+        var dimensions = [
             Math.abs(boundingBox.max.getComponent(0) - boundingBox.min.getComponent(0)),
             Math.abs(boundingBox.max.getComponent(1) - boundingBox.min.getComponent(1)),
             Math.abs(boundingBox.max.getComponent(2) - boundingBox.min.getComponent(2))
-        );
-        // Generate random points inside bounding box
-        var points = [], vectors = [];
-        var box = new THREE.Object3D();
-        var random = function(i) {return Math.floor(Math.random() * i * 1000) / 1000;};
-        for (var i = 0;i < numPoints;i++) {
-            var vector = new THREE.Vector3(
-                random(length.getComponent(0)) + boundingBox.min.getComponent(0),
-                random(length.getComponent(1)) + boundingBox.min.getComponent(1),
-                random(length.getComponent(2)) + boundingBox.min.getComponent(2)
-            );
-            var point = visualisations.vector2Point(vector);
-            //vector.uuid = point.uuid;
-            vector.ptr = point;
-            vectors.push(vector);
-            points.push(point);
-            box.add(point);
-        }
-        
-        // Initialize graphics
-        //var g = visualisations.threeSetup(canvas);
-        
-        // Create box and directional lines
-        g.scene.add(box);
-        
-        // Redraw function
-        g.redraw = function(){};
-        if(rotate){
-            g.redraw = function (){
-                box.rotation.y += 0.01;
-                g.renderer.render(g.scene, g.camera);
-                visualisations.requestAnimationFrame(g.redraw);
-            }
-        }else{
-            g.redraw = function (){
-                g.renderer.render(g.scene, g.camera);
-                visualisations.requestAnimationFrame(g.redraw);
-            }
-        }
-        g.redraw();
-        
-        var pointCache = new PointList(vectors);
-        var animationList = new visualisations.AnimationList();
-        var result = findPair(vectors, boundingBox, animationList, pointCache);
-        
-        // TODO: Have a register/subscribe method to AnimationList for this
-        box.add(animationList.g);
-        
-        return {
-            g: g,
-            al: animationList,
-            
-            vectors: vectors,
-            points: points,
-            
-            res: result,
-        };
-    }
-    
-    function makeButtons(animationList, elementTag){
-        var $el = jQuery(elementTag);
-        
-        var buttonsData = [
-            ["<<", "backward", function(){animationList.previousAnimation();}],
-            [">>", "forward", function(){animationList.nextAnimation();}],
-            ["Play", "continousPlay", function(){
-                var $this = jQuery(this);
-                animationList.finishCallback = function(){
-                        $this.text("Play");
-                        animationList.playing = false;
-                };
-                switch($this.text()){
-                    case "Play": // Curently not playing
-                        $this.text("Stop");
-                        animationList.nextAnimationLoop();
-                        break;
-                    case "Stop": // Currently not playing
-                    default: // Weird state
-                        animationList.finishCallback();
-                        break;
-                }
-            }],
         ];
-        var buttons = {};
-        
-        for(var i = 0;i < buttonsData.length;i++){
-            buttons[buttonsData[i][1]] = jQuery("<button/>", {
-                text: buttonsData[i][0],
-                id: buttonsData[i][1],
-                click: buttonsData[i][2],
-            });
+
+        // Find maximum dimension
+        var maxDimension = Math.max.apply(Math, dimensions);
+
+        // Return index of dimension
+        return dimensions.indexOf(maxDimension);
+    
+    }
+
+    function findPairBruteforce(points){
+        /*  Bruteforce the closest pair of points
+         *  (array of THREE.Vector3) -> array of THREE.Vector3
+         *  Runtime: O(1)
+         */
+
+        // Make sure there are enough points to compare
+        if(points.length <= 1){
+            return null;
         }
 
-        buttons["timeout"] = jQuery("<input/>", {
-            type: "text",
-            name: "timeout",
-            maxlength: 4,
-            val: animationList.timeout,
-        });
-        buttons["timeout"].attr("size", 4);
-        buttons["timeout"].change(function(e){
-            // Parse int
-            var timeout = Number.parseInt(buttons["timeout"].val());
-            // Low limit
-            if(timeout < 300){
-                timeout = 300;
-                buttons["timeout"].val(timeout);
+        // Declare the variables
+        var closest = [points[0], points[1]];
+        var contender = null;
+        var lines = [[points[0], points[1]]];
+        var badLines = [];
+
+        // Compare against [points[1], points[2]] and [points[2], points[0]] if needed
+        for(var i = 1;i < 3 && points.length == 3;i++){
+            contender = [points[i], points[(i + 1) % 3]];
+            lines.push([points[i], points[(i + 1) % 3]]);
+            if(closest[0].distanceTo(closest[1]) > contender[0].distanceTo(contender[1])){
+                badLines.push(closest);
+                closest = contender;
+            }else{
+                badLines.push(contender);
             }
-            // Update timeout
-            animationList.timeout = timeout;
-        });
+        }
 
-        $el.append(buttons["backward"]).append(" ");
-        $el.append(buttons["continousPlay"]).append(" ");
-        $el.append(buttons["forward"]).append("<br />");
-        $el.append("Timeout: ").append(buttons["timeout"]).append(" ");
-    }
-    
-    function init3D(graphics, points, size) {
-        return setup(
-            graphics,
-            points,
-            new THREE.Box3(
-                new THREE.Vector3(-size, -size, -size),
-                new THREE.Vector3( size,  size,  size)
-            )
-        );
-    }
-    
-    function init2D(graphics, points, size) {
-        return setup(
-            graphics,
-            points,
-            new THREE.Box3(
-                new THREE.Vector3(-size, -size, 0.),
-                new THREE.Vector3( size,  size, 0.)
-            ),
-            false
-        );
+        if(lines.length == 0){ // Only two points
+            ClosestPair.animations.addLine(objectCache, animationList, lines[0], true);
+        }else{ // Three points
+            ClosestPair.animations.addLines(objectCache, animationList, lines, false);
+            ClosestPair.animations.selectLine(objectCache, animationList, closest);
+            // ClosestPair.animations.removeLines(objectCache, animationList, badLines);
+        }
+
+        // Return closest
+        return closest;
     }
 
-    return {
-        init2D: init2D,
-        init3D: init3D,
-        findPair: findPair,
-        
-        makeButtons: makeButtons,
+    function findPair(boundingBox, points){
+        /*  Find the closest pair of points
+         *  (THREE.Box3, array of THREE.Vector3) -> array of THREE.Vector3
+         *  Runtime: O(n ln n)
+         */
+
+        var closest = null;
+
+        // Bruteforce approach
+        if(points.length <= 3){
+            return findPairBruteforce(points);
+        }
+
+        //var partitionedPoints = findPairPartitionPoints(boundingBox, points);
+
+        // Return result
+        return closest;
+    }
+    /* --- END main logic --- */
+
+    /* --- START function --- */
+    return function(points, pointObjects){
+        /*  Function in charge of executing algorithm
+         *  (array of THREE.Vector3, array of THREE.Object3D) -> ClosestPair
+         */
+
+        // Fill up cache'd variables
+        animationList = new visualisations.AnimationList();
+        boundingBox = new THREE.Box3();
+        sortedPoints = new SortedPoints(points);
+        allPoints = points;
+        objectCache = {
+            points: pointObjects,
+            lines: {},
+            boxes: {}
+        };
+
+        // Generate initial boundingBox
+        boundingBox.setFromPoints(points);
+        console.log(boundingBox);
+
+        var result = findPair(boundingBox, points);
+
+        return {
+            animationList: animationList,   // AnimationList object
+            result: [null, null]            // array of THREE.Vector3, representing the closest pair
+        };
     };
+    /* --- END function --- */
 })();

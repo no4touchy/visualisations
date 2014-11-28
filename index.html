@@ -54,7 +54,9 @@
 					<li><a href="#">Convex Hull</a></li>
 				</ul>
         	</div>
-        
+
+            <div class="canvas-home" style="width: 800px;height: 800px;display: none;"></div>
+
 	        <div class="col-lg-10 col-md-10">
 	            <div class="bs-example bs-example-tabs">
 	                <ul id="tabList" class="nav nav-tabs" role="tablist">
@@ -75,8 +77,7 @@
             
         </div>
         <!-- /.container -->
-        <!-- Bootstrap core JavaScript==================================================-
-        ->
+        <!-- Bootstrap core JavaScript================================================== -->
         <!-- Placed at the end of the document so the pages load faster -->
         <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
         <script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r67/three.min.js"></script>
@@ -84,6 +85,7 @@
         
         <script src="js/visualisations.js"></script>
         <script src="js/algorithms/closest_pair.js"></script>
+        <script src="js/algorithms/closest_pair_graphics.js"></script>
         <script src="js/algorithms/closest_pair_helper.js"></script>
         
         <script type="text/javascript">
@@ -94,8 +96,11 @@
             
             jQuery.noConflict();
 
-            var graphics = visualisations.threeSetup("#tabContent #base .canvas");
-            window.initVisualisation(graphics);
+            var graphics = visualisations.threeSetup(".canvas-home");
+
+            ClosestPair.init(graphics);
+
+            //window.initVisualisation(graphics);
 
             //var result = ClosestPair.init3D(".canvas", /*points*/25, /*grid size*/10);
             //ClosestPair.makeButtons(result.al, ".menu");
