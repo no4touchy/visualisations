@@ -257,18 +257,22 @@ ClosestPair.algorithm = (function(){
     }
     /* --- END main logic --- */
 
-    function bruteforceMinDistance(points){
+    function bruteforceClosestPair(points){
+        var closestPair = null;
         var minDistance = Number.POSITIVE_INFINITY;
+
         var l = points.length;
         for(var i = 0;i < l;i++){
             for(var j = i + 1;j < l;j++){
                 var distance = points[i].distanceTo(points[j]);
                 if(distance < minDistance){
                     minDistance = distance;
+                    closestPair = [points[i], points[j]];
                 }
             }
         }
-        return minDistance;
+
+        return closestPair;
     }
 
     /* --- START function --- */
@@ -292,14 +296,18 @@ ClosestPair.algorithm = (function(){
         boundingBox.setFromPoints(points);
         console.log(boundingBox);
 
-        var result = findPair(boundingBox, points);
+        var result  = findPair(boundingBox, points);
+        var result2 = bruteforceClosestPair(points);
+
         ClosestPair.animations.addLine(objectCache, animationList, result, true);
+        ClosestPair.animations.addLine(objectCache, animationList, result2, false);
+        animationList.nextAnimation();
         animationList.nextAnimation();
 
         console.log(result);
 
         console.log("ClosestPair distance = " + result[0].distanceTo(result[1]));
-        console.log("Bruteforce  distance = " + bruteforceMinDistance(points));
+        console.log("Bruteforce  distance = " + result2[0].distanceTo(result2[1]));
 
         return {
             animationList: animationList,   // AnimationList object

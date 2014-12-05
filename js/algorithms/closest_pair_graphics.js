@@ -39,6 +39,7 @@ ClosestPair.animations = (function(){
 
             for(var i = 0;i < points.length;i++){
                 var line = visualisations.vectors2Line(points[i]);
+                line.material.color.setHex(selected ? LINE_SELECTED_COLOUR : LINE_UNSELECTED_COLOUR);
                 line.puuid = linePUUID(points[i]);
                 lines.push(line);
                 objectCache.lines[line.puuid] = line;
@@ -62,7 +63,7 @@ ClosestPair.animations = (function(){
              *  ({points, lines, boxes}, visualisations.AnimationList, array of 2 THREE.Vector3, bool) -> null
              */
             if(selected === undefined){selected = false;}
-            return ClosestPair.animations.addLines(objectCache, animationList, [points]);
+            return ClosestPair.animations.addLines(objectCache, animationList, [points], selected);
         },
 
         // Line highlighting
