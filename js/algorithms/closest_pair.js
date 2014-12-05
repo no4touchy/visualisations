@@ -17,7 +17,7 @@ ClosestPair.algorithm = (function(){
 
         // Define sorting function
         var sorting = function(axis){
-            return points.sort(function(a, b){
+            return points.slice(0).sort(function(a, b){
                 return a.getComponent(axis) - b.getComponent(axis);
             });
         };
@@ -111,8 +111,6 @@ ClosestPair.algorithm = (function(){
          *  Runtime: O(n)
          */
 
-        // Linearly re-sort the points along some axis
-
         // Sort points
         var divisionAxis = findMaxAxis(boundingBox);
         var sortedPoints = sortPoints.resort(boundingBox, divisionAxis);
@@ -178,7 +176,7 @@ ClosestPair.algorithm = (function(){
         var divisionAxis = findMaxAxis(boundingBox);
         var median = (  partitionedPoints[0][partitionedPoints[0].length - 1].getComponent(divisionAxis) +
                         partitionedPoints[1][0].getComponent(divisionAxis)) / 2;
-        var threshold = maxDistance / 2 + 1e-5;
+        var threshold = maxDistance + 1e-5;
 
         // Construct middle partition boxes
         var middlePartitionBoxes = [partitionBoxes[0].clone(), partitionBoxes[1].clone()];
