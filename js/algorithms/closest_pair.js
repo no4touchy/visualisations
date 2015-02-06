@@ -91,6 +91,8 @@ ClosestPair.algorithm = (function(){
             }
         }
 
+        ClosestPair.animations.findPairBruteforce(animationList, lines, closest, badLines);
+
         /* Animations not fully completed yet
          * if(lines.length == 0){ // Only two points
             ClosestPair.animations.addLine(objectCache, animationList, lines[0], true);
@@ -284,11 +286,7 @@ ClosestPair.algorithm = (function(){
         boundingBox = new THREE.Box3();
         sortPoints = new SortedPoints(points);
         allPoints = points;
-        objectCache = {
-            points: pointObjects,
-            lines: {},
-            boxes: {}
-        };
+        ClosestPair.animations.initCache(pointObjects, {}, {});
 
         // Generate initial boundingBox
         boundingBox.setFromPoints(points);
@@ -297,10 +295,10 @@ ClosestPair.algorithm = (function(){
         var result  = findPair(boundingBox, points);
         var result2 = bruteforceClosestPair(points);
 
-        ClosestPair.animations.addLine(objectCache, animationList, result, true);
-        ClosestPair.animations.addLine(objectCache, animationList, result2, false);
+        /*ClosestPair.animations.addLine(animationList, result, true);
+        ClosestPair.animations.addLine(animationList, result2, false);
         animationList.nextAnimation();
-        animationList.nextAnimation();
+        animationList.nextAnimation();*/
 
         console.log(result);
 
@@ -309,7 +307,7 @@ ClosestPair.algorithm = (function(){
 
         return {
             animationList: animationList,   // AnimationList object
-            result: [null, null]            // array of THREE.Vector3, representing the closest pair
+            result: result                  // array of THREE.Vector3, representing the closest pair
         };
     };
     /* --- END function --- */

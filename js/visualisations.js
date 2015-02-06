@@ -36,11 +36,12 @@ window.visualisations = (function () {
     },
     AnimationList.prototype = {
         constructor: AnimationList,
-        addAnimation: function(animation) {
-            /** (visualisations.AnimationList.animation) -> null
+        addAnimation: function(build, destroy) {
+            /** (function, function) -> null
              *  Add new animation node to list
              *  O(1) time
             **/
+            animation = new AnimationList.Animation(build, destroy);
             if(this.headAnimation !== null) {
                 this.tailAnimation.next = animation;
                 animation.previous = this.tailAnimation;

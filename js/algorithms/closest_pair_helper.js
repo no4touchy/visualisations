@@ -1,4 +1,4 @@
-ClosestPair.POINT_COUNT = 4;
+ClosestPair.POINT_COUNT = 10;
 
 ClosestPair.setup = (function(){
     function random(size){
@@ -58,7 +58,9 @@ ClosestPair.setup = (function(){
         // Return result
         return {
             renderBox: renderBox,
-            pointObjects: pointObjects
+            pointObjects: pointObjects,
+            animationList: result.animationList,
+            result: result.result,
         };
     }
 
@@ -114,7 +116,7 @@ ClosestPair.init = function(graphics){
 
         var div = jQuery("<div class=\"tab-pane fade" + (i == 0 ? " active in" : "") + "\" id=\"tab" + i + "\">");
         if(i == 0 || i == 1){
-            jQuery("<div class=\"canvas\" style=\"float: left;width: 800px;height: 800px\"></div>").appendTo(div);
+            jQuery("<div class=\"canvas\" style=\"float: left;width: 600px;height: 600px\"></div>").appendTo(div);
             jQuery("<div class=\"menu\" style=\"float: right;\"></div>").appendTo(div);
         }
 
@@ -129,7 +131,15 @@ ClosestPair.init = function(graphics){
 
     // Move the graphics object to the 3D demo first
     canvas.detach().appendTo(jQuery("#tab0 .canvas"));
-    ClosestPair.setup.demo3D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
+    var result = ClosestPair.setup.demo3D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
+
+    jQuery("<button class=\"glyphicon glyphicon-step-backward\" aria-hidden=\"true\" \>").click(function(){
+        result.animationList.prevAnimation();
+    }).appendTo(".menu");
+
+    jQuery("<button class=\"glyphicon glyphicon-step-forward\" aria-hidden=\"true\" \>").click(function(){
+        result.animationList.nextAnimation();
+    }).appendTo(".menu");
 
     jQuery("#tabList #link1 a").click(function (e){
         // Move canvas to 2D demo
