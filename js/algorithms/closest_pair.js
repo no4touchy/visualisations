@@ -2,7 +2,6 @@ var ClosestPair = {};
 
 ClosestPair.algorithm = (function(){
     // Cached variables
-    var animationList;  // AnimationList object
     var boundingBox;    // Bounding box that encompases all points
     var allPoints;      // All point store
     var sortPoints;   // SortedPoints object
@@ -91,16 +90,7 @@ ClosestPair.algorithm = (function(){
             }
         }
 
-        ClosestPair.animations.findPairBruteforce(animationList, lines, closest, badLines);
-
-        /* Animations not fully completed yet
-         * if(lines.length == 0){ // Only two points
-            ClosestPair.animations.addLine(objectCache, animationList, lines[0], true);
-        }else{ // Three points
-            ClosestPair.animations.addLines(objectCache, animationList, lines, false);
-            ClosestPair.animations.selectLine(objectCache, animationList, closest);
-            // ClosestPair.animations.removeLines(objectCache, animationList, badLines);
-        }*/
+        ClosestPair.animations.findPairBruteforce(lines, closest, badLines);
 
         // Return closest
         return closest;
@@ -153,7 +143,7 @@ ClosestPair.algorithm = (function(){
          *  (array of 2 THREE.Vector3, array of 2 THREE.Vector3) -> array of 2 THREE.Vector3
          *  Runtime: O(1)
          */
-        
+
         // Check for null
         if(pair1 === null){
             return pair2;
@@ -163,8 +153,10 @@ ClosestPair.algorithm = (function(){
 
         // Find the closest pair
         if(pair1[0].distanceTo(pair1[1]) <= pair2[0].distanceTo(pair2[1])){
+            ClosestPair.animations.removeLine(pair2);
             return pair1;
         }
+        ClosestPair.animations.removeLine(pair1);
         return pair2;
     }
 
@@ -237,6 +229,8 @@ ClosestPair.algorithm = (function(){
         var partitionBoxes    = returnValues.boxes;
         var partitionedPoints = returnValues.points;
 
+        ClosestPair.animations.showPartitionBoxes(partitionBoxes);
+
         // Recursively solve problem
         var recursiveResult = [null, null];
         recursiveResult[0] = findPair(partitionBoxes[0], partitionedPoints[0]);
@@ -282,11 +276,10 @@ ClosestPair.algorithm = (function(){
          */
 
         // Fill up cache'd variables
-        animationList = new visualisations.AnimationList();
         boundingBox = new THREE.Box3();
         sortPoints = new SortedPoints(points);
         allPoints = points;
-        ClosestPair.animations.initCache(pointObjects, {}, {});
+        ClosestPair.animations.init(pointObjects, {}, {});
 
         // Generate initial boundingBox
         boundingBox.setFromPoints(points);
@@ -306,7 +299,7 @@ ClosestPair.algorithm = (function(){
         console.log("Bruteforce  distance = " + result2[0].distanceTo(result2[1]));
 
         return {
-            animationList: animationList,   // AnimationList object
+            animationList: ClosestPair.animations.getAnimationList(),   // AnimationList object
             result: result                  // array of THREE.Vector3, representing the closest pair
         };
     };

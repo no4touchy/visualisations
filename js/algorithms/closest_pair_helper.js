@@ -133,13 +133,28 @@ ClosestPair.init = function(graphics){
     canvas.detach().appendTo(jQuery("#tab0 .canvas"));
     var result = ClosestPair.setup.demo3D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
 
+    // Construct AnimationList play menu
     jQuery("<button class=\"glyphicon glyphicon-step-backward\" aria-hidden=\"true\" \>").click(function(){
         result.animationList.prevAnimation();
     }).appendTo(".menu");
-
+    var play = true;
+    jQuery("<button class=\"glyphicon glyphicon-play\" aria-hidden=\"true\">").click(function() {
+        if(play) {
+            play = false;
+            jQuery(this).removeClass("glyphicon-play").addClass("glyphicon-pause");
+            result.animationList.nextAnimationLoop();
+        } else {
+            play = true;
+            jQuery(this).addClass("glyphicon-play").removeClass("glyphicon-pause");
+            result.animationList.playing = false;
+        }
+    }).appendTo(".menu");
     jQuery("<button class=\"glyphicon glyphicon-step-forward\" aria-hidden=\"true\" \>").click(function(){
         result.animationList.nextAnimation();
     }).appendTo(".menu");
+    jQuery(".menu").append("<br />");
+    /*var input = jQuery("<input type=\"text\" class=\"form-control\" placeholder=\"\" \>")
+        .appendTo(".menu").val(result.animationList.timeout);*/
 
     jQuery("#tabList #link1 a").click(function (e){
         // Move canvas to 2D demo

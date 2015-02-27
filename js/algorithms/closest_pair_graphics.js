@@ -6,10 +6,11 @@ ClosestPair.animations = (function(){
     var POINT_BLUE = 0x152C6A;
 
     var objectCache;
+    var animationList;
 
     /* --- Helper functions --- */
 
-    function initCache(points, lines, boxes){
+    function init(points, lines, boxes){
         /*  Initialize the object cache.
          *  (array of THREE.Object3D, array of THREE.Object3D, array of THREE.Object3D) -> nil
          */
@@ -17,7 +18,9 @@ ClosestPair.animations = (function(){
             points: points,
             lines: lines,
             boxes: boxes
-        }
+        };
+
+        animationList = new visualisations.AnimationList();
     }
 
     function linePUUID(points){
@@ -44,9 +47,9 @@ ClosestPair.animations = (function(){
     /* --- Graphics functions --- */
 
     /* -- Line creation -- */
-    function addLines(animationList, points, selected){
+    function addLines(points, selected){
         /*  Create a line between the points
-         *  (visualisations.AnimationList, arrray of arrays of 2 THREE.Vector3, bool) -> null
+         *  (arrray of arrays of 2 THREE.Vector3, bool) -> null
          */
         if(selected === undefined){selected = false;}
 
@@ -73,7 +76,17 @@ ClosestPair.animations = (function(){
             }
         );
     }
-    function removeLines(animationList, lines){
+    function addLine(points, selected){
+        /*  Create a line between the points
+         *  (array of 2 THREE.Vector3, bool) -> null
+         */
+        if(selected === undefined){selected = false;}
+        return addLines([points], selected);
+    }
+    function removeLines(lines){
+        /*  Remove a line
+         *  (arrray of arrays of 2 THREE.Vector3, bool) -> null
+         */
         var lineIDs = [];
 
         for(var i = 0;i < lines.length;i++){
@@ -93,18 +106,18 @@ ClosestPair.animations = (function(){
             }
         );
     }
-    function addLine(animationList, points, selected){
+    function removeLine(points, selected){
         /*  Create a line between the points
-         *  (visualisations.AnimationList, array of 2 THREE.Vector3, bool) -> null
+         *  (array of 2 THREE.Vector3, bool) -> null
          */
         if(selected === undefined){selected = false;}
-        return addLines(animationList, [points], selected);
+        return removeLines([points], selected);
     }
     
     /* -- Line highlighting -- */
-    function selectLine(animationList, points){
+    function selectLine(points){
         /*  Make a line selected
-         *  (visualistions.AnimationList, array of 2 THREE.Vector3) -> null
+         *  (array of 2 THREE.Vector3) -> null
          */
         var line = findLineByPUUID(objectCache, points);
         var oldColour = null;
@@ -122,9 +135,9 @@ ClosestPair.animations = (function(){
             );
         }
     }
-    function unselectLines(animationList, points){
+    function unselectLines(points){
         /*  Make the line unselected
-         *  (visualistions.AnimationList, array of arrays of 2 THREE.Vector3) -> null
+         *  (array of arrays of 2 THREE.Vector3) -> null
          */
         var lines = [];
         var oldColours = [];
@@ -152,19 +165,35 @@ ClosestPair.animations = (function(){
     }
 
     return {
-        initCache: initCache,
+        init: init,
+
+        setAnimationList: function(aList) {
+            animationList = aList;
+        },
+
+        getAnimationList: function() {
+            return animationList;
+        },
+
+
 
         addLine: addLine,
 
-        findPairBruteforce: function(animationList, lines, shortestLine, badLines){
+        removeLine: removeLine,
+
+        findPairBruteforce: function(lines, shortestLine, badLines) {
             if(lines.length == 1){
-                addLine(animationList, shortestLine, true);
+                addLine(shortestLine, true);
             }else{
-                addLines(animationList, lines);
-                selectLine(animationList, shortestLine);
-                removeLines(animationList, badLines);
+                addLines(lines);
+                selectLine(shortestLine);
+                removeLines(badLines);
             }
         },
+
+        showPartitionBoxes: function(partitionBoxes) {
+
+        }
     };
 })();
 
