@@ -5,21 +5,28 @@ ClosestPair.animations = (function(){
     var POINT_RED = 0x9E190F;
     var POINT_BLUE = 0x152C6A;
 
-    var objectCache;
+    var contextStack;
+    var currentContext;
     var animationList;
 
     /* --- Helper functions --- */
 
+    function graphicContext(){
+        this.closestPair = [];
+        this.closestLine = [];
+
+        this.otherPairs = [];
+        this.pairs = [];
+        this.lines = [];
+    }
+
     function init(points, lines, boxes){
-        /*  Initialize the object cache.
+        /*  Initialize the structures
          *  (array of THREE.Object3D, array of THREE.Object3D, array of THREE.Object3D) -> nil
          */
-        objectCache = {
-            points: points,
-            lines: lines,
-            boxes: boxes
-        };
 
+        contextStack = [];
+        currentContext = null;
         animationList = new visualisations.AnimationList();
     }
 
@@ -30,16 +37,18 @@ ClosestPair.animations = (function(){
         return points[0].ptr.uuid + ":" + points[1].ptr.uuid;
     }
 
-    function findLineByPUUID(objectCache, points){
+    function findLineByPUUID(lines, points){
         /*  Find the line using the points' uuid
          *  Returns null if line does not exist
-         *  ({points, lines, boxes}, array of 2 THREE.Vector3) -> THREE.Line
+         *  (array of THREE.Line, array of 2 THREE.Vector3) -> THREE.Line
          */
         for(var i = 0;i < 2;i++){
             var uuid = linePUUID([points[i], points[(i + 1) % 2]]);
-            var line = objectCache.lines[uuid];
-            if(line !== undefined){
-                return line;
+            for(var j = 0;j < lines.length;j++){
+                line = lines[j];
+                if(line.puuid == uuid){
+                    return line;
+                }
             }
         }
     }
@@ -47,34 +56,37 @@ ClosestPair.animations = (function(){
     /* --- Graphics functions --- */
 
     /* -- Line creation -- */
-    function addLines(points, selected){
+    function addLines(lines, selected){
         /*  Create a line between the points
          *  (arrray of arrays of 2 THREE.Vector3, bool) -> null
          */
         if(selected === undefined){selected = false;}
 
-        var lines = [];
+        var context = currentContext;
+        var lineObjs = [];
 
-        for(var i = 0;i < points.length;i++){
-            var line = visualisations.vectors2Line(points[i]);
+        for(var i = 0;i < lines.length;i++){
+            var line = visualisations.vectors2Line(lines[i]);
             line.material.color.setHex(selected ? LINE_SELECTED_COLOUR : LINE_UNSELECTED_COLOUR);
-            line.puuid = linePUUID(points[i]);
-            lines.push(line);
-            objectCache.lines[line.puuid] = line;
+            line.puuid = linePUUID(lines[i]);
+            lineObjs.push(line);
+            context.lines.push(line);
         }
 
         animationList.addAnimation(
             /* build */ function(g){
-                for(var i = 0;i < lines.length;i++){
-                    g.add(lines[i]);
+                for(var i = 0;i < lineObjs.length;i++){
+                    g.add(lineObjs[i]);
                 }
             },
             /* destroy */ function (g){
-                for(var i = 0;i < lines.length;i++){
-                    g.remove(lines[i]);
+                for(var i = 0;i < lineObjs.length;i++){
+                    g.remove(lineObjs[i]);
                 }
             }
         );
+
+        return lineObjs;
     }
     function addLine(points, selected){
         /*  Create a line between the points
@@ -85,33 +97,34 @@ ClosestPair.animations = (function(){
     }
     function removeLines(lines){
         /*  Remove a line
-         *  (arrray of arrays of 2 THREE.Vector3, bool) -> null
+         *  (arrray of arrays of 2 THREE.Vector3) -> null
          */
-        var lineIDs = [];
+
+        var context = currentContext;
+        var lineObjs = [];
 
         for(var i = 0;i < lines.length;i++){
-            lineIDs.push(findLineByPUUID(objectCache, lines[i]));
+            lineObjs.push(findLineByPUUID(context.lines, lines[i]));
         }
 
         animationList.addAnimation(
             /* build */ function(g){
-                for(var i = 0;i < lineIDs.length;i++){
-                    g.remove(lineIDs[i]);
+                for(var i = 0;i < lineObjs.length;i++){
+                    g.remove(lineObjs[i]);
                 }
             },
             /* destroy */ function(g){
-                for(var i = 0;i < lineIDs.length;i++){
-                    g.add(lineIDs[i]);
+                for(var i = 0;i < lineObjs.length;i++){
+                    g.add(lineObjs[i]);
                 }
             }
         );
     }
-    function removeLine(points, selected){
+    function removeLine(points){
         /*  Create a line between the points
          *  (array of 2 THREE.Vector3, bool) -> null
          */
-        if(selected === undefined){selected = false;}
-        return removeLines([points], selected);
+        return removeLines([points]);
     }
     
     /* -- Line highlighting -- */
@@ -119,7 +132,9 @@ ClosestPair.animations = (function(){
         /*  Make a line selected
          *  (array of 2 THREE.Vector3) -> null
          */
-        var line = findLineByPUUID(objectCache, points);
+
+        var context = currentContext;
+        var line = findLineByPUUID(context.lines, points);
         var oldColour = null;
 
         // Check if line if found
@@ -134,20 +149,21 @@ ClosestPair.animations = (function(){
                 }
             );
         }
+
+        return line;
     }
     function unselectLines(points){
         /*  Make the line unselected
          *  (array of arrays of 2 THREE.Vector3) -> null
          */
+
+        var context = currentContext;
         var lines = [];
         var oldColours = [];
 
         for(var i = 0;i < points.length;i++){
-            var line = findLineByPUUID(points[i]);
-            if(line !== undefined){
-                lines.push(line);
-                oldColours.push(line.material.color.getHex());
-            }
+            var line = findLineByPUUID(context.lines, points[i]);
+            oldColours.push(line.material.color.getHex());
         }
 
         animationList.addAnimation(
@@ -167,6 +183,25 @@ ClosestPair.animations = (function(){
     return {
         init: init,
 
+        pushContext: function() {
+            currentContext = new graphicContext();
+            contextStack.push(currentContext);
+        },
+        popContext: function() {
+            if(contextStack.length == 0){
+                return;
+            }
+            var lastContext = contextStack.pop();
+
+            if(contextStack.length != 0){
+                currentContext = contextStack[contextStack.length - 1];
+                currentContext.pairs.push(lastContext.closestPair);
+                currentContext.lines.push(lastContext.closestLine);
+            }else{
+                currentContext = null;
+            }
+        },
+
         setAnimationList: function(aList) {
             animationList = aList;
         },
@@ -175,20 +210,34 @@ ClosestPair.animations = (function(){
             return animationList;
         },
 
-
-
         addLine: addLine,
 
         removeLine: removeLine,
 
         findPairBruteforce: function(lines, shortestLine, badLines) {
+            var context = currentContext;
+
+            context.closestPair = shortestLine;
+            context.otherPairs = badLines;
+            context.pairs = lines;
+
             if(lines.length == 1){
-                addLine(shortestLine, true);
+                context.closestLine = addLine(shortestLine, true)[0];
             }else{
                 addLines(lines);
-                selectLine(shortestLine);
+                context.closestLine = selectLine(shortestLine);
                 removeLines(badLines);
             }
+        },
+
+        findClosestPair: function(closestPair, furtherPairs) {
+            var context = currentContext;
+
+            context.closestPair = closestPair;
+            context.closestLine = findLineByPUUID(context.lines, closestPair);
+
+            unselectLines(furtherPairs);
+            removeLines(furtherPairs);
         },
 
         showPartitionBoxes: function(partitionBoxes) {

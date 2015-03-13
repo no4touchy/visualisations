@@ -138,26 +138,29 @@ ClosestPair.algorithm = (function(){
         };
     }
 
-    function findClosestPair(pair1, pair2){
-        /*  Return the closest pair out of the two given
-         *  (array of 2 THREE.Vector3, array of 2 THREE.Vector3) -> array of 2 THREE.Vector3
-         *  Runtime: O(1)
+    function findClosestPair(pairs, graphics){
+        /*  Return the closest pair out of the two or three given given
+         *  (array of arrays of 2 THREE.Vector3) -> array of 2 THREE.Vector3
+         *  Runtime: O(N), however it is only run with pairs.length of 2 and 3
          */
 
-        // Check for null
-        if(pair1 === null){
-            return pair2;
-        }else if(pair2 === null){
-            return pair1;
+        if(graphics === undefined){graphics = false;}
+
+        distances = [];
+        for(var i = 0;i < pairs.length;i++){
+            distances.push(pairs[i] !== null ?
+                pairs[i][0].distanceTo(pairs[i][1]) :
+                Number.POSITIVE_INFINITY);
         }
 
-        // Find the closest pair
-        if(pair1[0].distanceTo(pair1[1]) <= pair2[0].distanceTo(pair2[1])){
-            ClosestPair.animations.removeLine(pair2);
-            return pair1;
+        var closestIndex = distances.indexOf(Math.min.apply(Math, distances));
+        var closestPair = pairs[closestIndex];
+        var otherPairs = pairs.slice(0, closestIndex).concat(pairs.slice(closestIndex + 1, pairs.length));
+
+        if(graphics){
+            ClosestPair.animations.findClosestPair(closestPair, otherPairs);
         }
-        ClosestPair.animations.removeLine(pair1);
-        return pair2;
+        return closestPair;
     }
 
     function findMiddlePair(boundingBox, partitionBoxes, partitionedPoints, maxDistance){
@@ -200,7 +203,8 @@ ClosestPair.algorithm = (function(){
                 j++;
             }
 
-            closest = findClosestPair(closest, findClosestPair(current, next));
+            //closest = findClosestPair(closest, findClosestPair(current, next));
+            closest = findClosestPair([closest, current, next], false);
         }
 
         // Return a closest pair with distance < maxDistance or null
@@ -221,8 +225,14 @@ ClosestPair.algorithm = (function(){
 
         // Bruteforce approach
         if(points.length <= 3){
-            return findPairBruteforce(points);
+            ClosestPair.animations.pushContext();
+            var closest = findPairBruteforce(points);
+            ClosestPair.animations.popContext();
+            return closest;
         }
+
+        // Create a new context to store graphics objects
+        ClosestPair.animations.pushContext();
 
         // Partition points
         var returnValues = partitionPoints(boundingBox, points);
@@ -236,7 +246,7 @@ ClosestPair.algorithm = (function(){
         recursiveResult[0] = findPair(partitionBoxes[0], partitionedPoints[0]);
         recursiveResult[1] = findPair(partitionBoxes[1], partitionedPoints[1]);
 
-        closest = findClosestPair(recursiveResult[0], recursiveResult[1]);
+        closest = findClosestPair(recursiveResult, true);
 
         // Check for null before checking middle points
         if(closest !== null){
@@ -245,6 +255,9 @@ ClosestPair.algorithm = (function(){
                 closest = middle;
             }
         }
+
+        // Lose the graphics constext
+        ClosestPair.animations.popContext();
 
         // Return result
         return closest;
