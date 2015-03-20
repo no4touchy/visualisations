@@ -56,11 +56,12 @@ ClosestPair.animations = (function(){
     /* --- Graphics functions --- */
 
     /* -- Line creation -- */
-    function addLines(lines, selected){
+    function addLines(lines, selected, temporary){
         /*  Create a line between the points
-         *  (arrray of arrays of 2 THREE.Vector3, bool) -> null
+         *  (arrray of arrays of 2 THREE.Vector3, bool, bool) -> null
          */
         if(selected === undefined){selected = false;}
+        if(temporary === undefined){temporary = false;}
 
         var context = currentContext;
         var lineObjs = [];
@@ -70,7 +71,9 @@ ClosestPair.animations = (function(){
             line.material.color.setHex(selected ? LINE_SELECTED_COLOUR : LINE_UNSELECTED_COLOUR);
             line.puuid = linePUUID(lines[i]);
             lineObjs.push(line);
-            context.lines.push(line);
+            if(!temporary) {
+                context.lines.push(line);
+            }
         }
 
         animationList.addAnimation(
@@ -95,16 +98,17 @@ ClosestPair.animations = (function(){
         if(selected === undefined){selected = false;}
         return addLines([points], selected);
     }
-    function removeLines(lines){
+    function removeLines(lines, objects){
         /*  Remove a line
-         *  (arrray of arrays of 2 THREE.Vector3) -> null
+         *  (arrray of arrays of 2 THREE.Vector3, array of THREE.Line) -> null
          */
 
         var context = currentContext;
         var lineObjs = [];
+        if(objects === undefined){objects = context.lines;}
 
         for(var i = 0;i < lines.length;i++){
-            lineObjs.push(findLineByPUUID(context.lines, lines[i]));
+            lineObjs.push(findLineByPUUID(objects, lines[i]));
         }
 
         animationList.addAnimation(
@@ -180,6 +184,43 @@ ClosestPair.animations = (function(){
         );
     }
 
+    function findPairBruteforce (lines, shortestLine, badLines) {
+        var context = currentContext;
+
+        context.closestPair = shortestLine;
+        context.otherPairs = badLines;
+        context.pairs = lines;
+
+        if(lines.length == 1){
+            context.closestLine = addLine(shortestLine, true)[0];
+        }else{
+            addLines(lines);
+            context.closestLine = selectLine(shortestLine);
+            removeLines(badLines);
+        }
+    }
+    function findClosestPair (closestPair, furtherPairs) {
+        var context = currentContext;
+
+        context.closestPair = closestPair;
+        context.closestLine = findLineByPUUID(context.lines, closestPair);
+
+        unselectLines(furtherPairs);
+        removeLines(furtherPairs);
+    }
+
+    function findMiddlePair (closestPair, allPairs, badPairs) {
+        var context = currentContext;
+
+        var lines = addLines(allPairs, false, false);
+        var closestLine = findLineByPUUID(lines, closestPair);
+        context.pairs.push(closestPair);
+        context.lines.push(closestLine);
+
+        selectLine(closestPair);
+        removeLines(badPairs, lines);
+    }
+
     return {
         init: init,
 
@@ -205,40 +246,16 @@ ClosestPair.animations = (function(){
         setAnimationList: function(aList) {
             animationList = aList;
         },
-
         getAnimationList: function() {
             return animationList;
         },
 
         addLine: addLine,
-
         removeLine: removeLine,
 
-        findPairBruteforce: function(lines, shortestLine, badLines) {
-            var context = currentContext;
-
-            context.closestPair = shortestLine;
-            context.otherPairs = badLines;
-            context.pairs = lines;
-
-            if(lines.length == 1){
-                context.closestLine = addLine(shortestLine, true)[0];
-            }else{
-                addLines(lines);
-                context.closestLine = selectLine(shortestLine);
-                removeLines(badLines);
-            }
-        },
-
-        findClosestPair: function(closestPair, furtherPairs) {
-            var context = currentContext;
-
-            context.closestPair = closestPair;
-            context.closestLine = findLineByPUUID(context.lines, closestPair);
-
-            unselectLines(furtherPairs);
-            removeLines(furtherPairs);
-        },
+        findPairBruteforce: findPairBruteforce,
+        findClosestPair: findClosestPair,
+        findMiddlePair: findMiddlePair,
 
         showPartitionBoxes: function(partitionBoxes) {
 

@@ -187,6 +187,7 @@ ClosestPair.algorithm = (function(){
         ];
 
         var closest = null;
+        var pairs = [];
         var i = 0, j = 0
         var m = [middlePartitionedPoints[0].length, middlePartitionedPoints[1].length]
         while (i < m[0] && j < m[1]) {
@@ -203,12 +204,32 @@ ClosestPair.algorithm = (function(){
                 j++;
             }
 
-            //closest = findClosestPair(closest, findClosestPair(current, next));
-            closest = findClosestPair([closest, current, next], false);
+            pairs.push(current);
+            if(next !== null){
+                pairs.push(next);
+                closest = findClosestPair([closest, current, next], false);
+            }else{
+                closest = findClosestPair([closest, current], false);
+            }
         }
 
+        // If no closer pair found, return
+        if(closest === null){
+            return null;
+        }
+
+        // Remove the closest pair from all others
+        var badPairs = pairs.slice(0);
+        for(var i = 0;i < pairs.length;i++){
+            if(closest[0].equals(pairs[i][0]) && closest[0].equals(pairs[i][0])){
+                badPairs = badPairs.slice(0, i).concat(badPairs.slice(i + 1, badPairs.length));
+                break;
+            }
+        }
+        ClosestPair.animations.findMiddlePair(closest, pairs, badPairs);
+
         // Return a closest pair with distance < maxDistance or null
-        if(closest !== null && closest[0].distanceTo(closest[1]) < maxDistance){
+        if(closest[0].distanceTo(closest[1]) < maxDistance){
             return closest;
         }
         return null;
@@ -252,7 +273,7 @@ ClosestPair.algorithm = (function(){
         if(closest !== null){
             var middle = findMiddlePair(boundingBox, partitionBoxes, partitionedPoints, closest[0].distanceTo(closest[1]));
             if(middle !== null){
-                closest = middle;
+                closest = findClosestPair([closest, middle], true);
             }
         }
 

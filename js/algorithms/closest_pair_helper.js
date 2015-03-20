@@ -116,7 +116,7 @@ ClosestPair.init = function(graphics){
 
         var div = jQuery("<div class=\"tab-pane fade" + (i == 0 ? " active in" : "") + "\" id=\"tab" + i + "\">");
         if(i == 0 || i == 1){
-            jQuery("<div class=\"canvas\" style=\"float: left;width: 600px;height: 600px\"></div>").appendTo(div);
+            jQuery("<div class=\"canvas\" style=\"float: left;width: 800px;height: 800px\"></div>").appendTo(div);
             jQuery("<div class=\"menu\" style=\"float: right;\"></div>").appendTo(div);
         }
 
@@ -135,7 +135,7 @@ ClosestPair.init = function(graphics){
 
     // Construct AnimationList play menu
     jQuery("<button class=\"glyphicon glyphicon-step-backward\" aria-hidden=\"true\" \>").click(function(){
-        result.animationList.prevAnimation();
+        result.animationList.previousAnimation();
     }).appendTo(".menu");
     var play = true;
     jQuery("<button class=\"glyphicon glyphicon-play\" aria-hidden=\"true\">").click(function() {
@@ -153,8 +153,6 @@ ClosestPair.init = function(graphics){
         result.animationList.nextAnimation();
     }).appendTo(".menu");
     jQuery(".menu").append("<br />");
-    /*var input = jQuery("<input type=\"text\" class=\"form-control\" placeholder=\"\" \>")
-        .appendTo(".menu").val(result.animationList.timeout);*/
 
     jQuery("#tabList #link1 a").click(function (e){
         // Move canvas to 2D demo
