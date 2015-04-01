@@ -217,15 +217,25 @@ ClosestPair.animations = (function(){
         context.pairs.push(closestPair);
         context.lines.push(closestLine);
 
+        console.log(closestLine);
+
         if(context.closestLine == undefined){
             context.closestPair = closestPair;
             context.closestLine = closestLine;
         }else if(context.closestLine.uuid != closestLine.uuid){
-            badPairs.push(context.closestPair);
-            lines.push(context.closestLine);
 
-            context.closestPair = closestPair;
-            context.closestLine = closestLine;
+            var d1 = closestLine.geometry.vertices[0].distanceTo(closestLine.geometry.vertices[1]);
+            var d2 = context.closestLine.geometry.vertices[0].distanceTo(context.closestLine.geometry.vertices[1]);
+
+            if(d1 < d2){
+                badPairs.push(context.closestPair);
+                lines.push(context.closestLine);
+
+                context.closestPair = closestPair;
+                context.closestLine = closestLine;
+            }else{
+                badPairs.push(closestPair);
+            }
         }
 
         selectLine(closestPair);
