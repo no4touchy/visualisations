@@ -1,4 +1,4 @@
-ClosestPair.POINT_COUNT = 10;
+ClosestPair.POINT_COUNT = 6;
 
 ClosestPair.setup = (function(){
     function random(size){

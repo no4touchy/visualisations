@@ -188,8 +188,8 @@ ClosestPair.algorithm = (function(){
 
         var closest = null;
         var pairs = [];
-        var i = 0, j = 0
-        var m = [middlePartitionedPoints[0].length, middlePartitionedPoints[1].length]
+        var i = 0, j = 0;
+        var m = [middlePartitionedPoints[0].length, middlePartitionedPoints[1].length];
         while (i < m[0] && j < m[1]) {
             var current = [middlePartitionedPoints[0][i], middlePartitionedPoints[1][j]], next = null;
             if (i < m[0] && current[0].getComponent(divisionAxis) >= current[1].getComponent(divisionAxis)) {
@@ -221,7 +221,7 @@ ClosestPair.algorithm = (function(){
         // Remove the closest pair from all others
         var badPairs = pairs.slice(0);
         for(var i = 0;i < pairs.length;i++){
-            if(closest[0].equals(pairs[i][0]) && closest[0].equals(pairs[i][0])){
+            if(closest[0].equals(pairs[i][0]) && closest[1].equals(pairs[i][1])){
                 badPairs = badPairs.slice(0, i).concat(badPairs.slice(i + 1, badPairs.length));
                 break;
             }

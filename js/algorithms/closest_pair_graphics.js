@@ -217,6 +217,17 @@ ClosestPair.animations = (function(){
         context.pairs.push(closestPair);
         context.lines.push(closestLine);
 
+        if(context.closestLine == undefined){
+            context.closestPair = closestPair;
+            context.closestLine = closestLine;
+        }else if(context.closestLine.uuid != closestLine.uuid){
+            badPairs.push(context.closestPair);
+            lines.push(context.closestLine);
+
+            context.closestPair = closestPair;
+            context.closestLine = closestLine;
+        }
+
         selectLine(closestPair);
         removeLines(badPairs, lines);
     }
