@@ -1,4 +1,4 @@
 Visualization
 =============
 
-A web-based tool to visualiza algorithms and data structure 
+A web-based tool to visualize algorithms and data structure.

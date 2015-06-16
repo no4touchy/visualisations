@@ -3,7 +3,6 @@ var ClosestPair = {};
 ClosestPair.algorithm = (function(){
     // Cached variables
     var boundingBox;    // Bounding box that encompases all points
-    var allPoints;      // All point store
     var sortPoints;   // SortedPoints object
     var objectCache;    // Cache of graphics objects
 
@@ -242,38 +241,34 @@ ClosestPair.algorithm = (function(){
          */
 
         var closest = null;
-        var returnValues;
-
-        // Bruteforce approach
-        if(points.length <= 3){
-            ClosestPair.animations.pushContext();
-            var closest = findPairBruteforce(points);
-            ClosestPair.animations.popContext();
-            return closest;
-        }
 
         // Create a new context to store graphics objects
         ClosestPair.animations.pushContext();
 
-        // Partition points
-        var returnValues = partitionPoints(boundingBox, points);
-        var partitionBoxes    = returnValues.boxes;
-        var partitionedPoints = returnValues.points;
+        if (points.length <= 3) { // Bruteforce approach
+            closest = findPairBruteforce(points);
+        }else{ // Divide and conquer approach
+            // Partition points
+            var returnValues = partitionPoints(boundingBox, points);
+            var partitionBoxes    = returnValues.boxes;
+            var partitionedPoints = returnValues.points;
 
-        ClosestPair.animations.showPartitionBoxes(partitionBoxes);
+            // Animate the partition process
+            ClosestPair.animations.showPartitionBoxes(partitionBoxes);
 
-        // Recursively solve problem
-        var recursiveResult = [null, null];
-        recursiveResult[0] = findPair(partitionBoxes[0], partitionedPoints[0]);
-        recursiveResult[1] = findPair(partitionBoxes[1], partitionedPoints[1]);
+            // Recursively solve problem
+            var recursiveResult = [null, null];
+            recursiveResult[0] = findPair(partitionBoxes[0], partitionedPoints[0]);
+            recursiveResult[1] = findPair(partitionBoxes[1], partitionedPoints[1]);
 
-        closest = findClosestPair(recursiveResult, true);
+            closest = findClosestPair(recursiveResult, true);
 
-        // Check for null before checking middle points
-        if(closest !== null){
-            var middle = findMiddlePair(boundingBox, partitionBoxes, partitionedPoints, closest[0].distanceTo(closest[1]));
-            if(middle !== null){
-                closest = findClosestPair([closest, middle], true);
+            // Check for null before checking middle points
+            if(closest !== null){
+                var middle = findMiddlePair(boundingBox, partitionBoxes, partitionedPoints, closest[0].distanceTo(closest[1]));
+                if(middle !== null){
+                    closest = findClosestPair([closest, middle], true);
+                }
             }
         }
 
@@ -312,7 +307,6 @@ ClosestPair.algorithm = (function(){
         // Fill up cache'd variables
         boundingBox = new THREE.Box3();
         sortPoints = new SortedPoints(points);
-        allPoints = points;
         ClosestPair.animations.init(pointObjects, {}, {});
 
         // Generate initial boundingBox
