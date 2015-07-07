@@ -45,7 +45,7 @@ ClosestPair.animations = (function(){
         for(var i = 0;i < 2;i++){
             var uuid = linePUUID([points[i], points[(i + 1) % 2]]);
 
-            return _.find(lines, function(line){
+            return _.find(lines, function (line) {
                 return line.puuid == uuid;
             });
         }
@@ -76,14 +76,10 @@ ClosestPair.animations = (function(){
 
         animationList.addAnimation(
             /* build */ function(g){
-                _.forEach(lineObjs, function(lineObj){
-                    g.add(lineObj);
-                });
+                _.forEach(lineObjs, g.add);
             },
             /* destroy */ function (g){
-                _.forEach(lineObjs, function(lineObj){
-                    g.remove(lineObj);
-                });
+                _.forEach(lineObjs, g.remove);
             }
         );
 
@@ -111,14 +107,10 @@ ClosestPair.animations = (function(){
 
         animationList.addAnimation(
             /* build */ function(g){
-                _.forEach(lineObjs, function(lineObj){
-                    g.remove(lineObj);
-                });
+                _.forEach(lineObjs, g.remove);
             },
             /* destroy */ function(g){
-                _.forEach(lineObjs, function(lineObj){
-                    g.add(lineObj);
-                });
+                _.forEach(lineObjs, g.add);
             }
         );
     }
