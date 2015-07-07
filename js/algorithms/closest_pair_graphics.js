@@ -44,12 +44,10 @@ ClosestPair.animations = (function(){
          */
         for(var i = 0;i < 2;i++){
             var uuid = linePUUID([points[i], points[(i + 1) % 2]]);
-            for(var j = 0;j < lines.length;j++){
-                line = lines[j];
-                if(line.puuid == uuid){
-                    return line;
-                }
-            }
+
+            return _.find(lines, function(line){
+                return line.puuid == uuid;
+            });
         }
     }
 
@@ -78,14 +76,14 @@ ClosestPair.animations = (function(){
 
         animationList.addAnimation(
             /* build */ function(g){
-                for(var i = 0;i < lineObjs.length;i++){
-                    g.add(lineObjs[i]);
-                }
+                _.forEach(lineObjs, function(lineObj){
+                    g.add(lineObj);
+                });
             },
             /* destroy */ function (g){
-                for(var i = 0;i < lineObjs.length;i++){
-                    g.remove(lineObjs[i]);
-                }
+                _.forEach(lineObjs, function(lineObj){
+                    g.remove(lineObj);
+                });
             }
         );
 
@@ -113,14 +111,14 @@ ClosestPair.animations = (function(){
 
         animationList.addAnimation(
             /* build */ function(g){
-                for(var i = 0;i < lineObjs.length;i++){
-                    g.remove(lineObjs[i]);
-                }
+                _.forEach(lineObjs, function(lineObj){
+                    g.remove(lineObj);
+                });
             },
             /* destroy */ function(g){
-                for(var i = 0;i < lineObjs.length;i++){
-                    g.add(lineObjs[i]);
-                }
+                _.forEach(lineObjs, function(lineObj){
+                    g.add(lineObj);
+                });
             }
         );
     }
@@ -172,14 +170,14 @@ ClosestPair.animations = (function(){
 
         animationList.addAnimation(
             /* build */ function(g){
-                for(var i = 0;i < lines.length;i++){
-                    lines[i].material.color.setHex(LINE_UNSELECTED_COLOUR);
-                }
+                _.forEach(lines, function(line){
+                    line.material.color.setHex(LINE_UNSELECTED_COLOUR);
+                });
             },
             /* destroy */ function (g){
-                for(var i = 0;i < lines.length;i++){
-                    lines[i].material.color.setHex(oldColours[i]);
-                }
+                _.forEach(lines, function(line, i){
+                    line.material.color.setHex(oldColours[i]);
+                });
             }
         );
     }
