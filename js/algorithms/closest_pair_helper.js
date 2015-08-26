@@ -30,6 +30,9 @@ ClosestPair.setup = (function(){
         }
 
         // Add renderbox to scene
+        while(graphics.scene.children.length > 0){
+            graphics.scene.remove(graphics.scene.children[0]);
+        }
         graphics.scene.add(renderBox);
 
         // Setup the redraw function
@@ -86,7 +89,7 @@ ClosestPair.setup = (function(){
              */
             var points = [];
             for(var i = 0;i < pointsCount;i++){
-                points.append(new THREE.Vector3(
+                points.push(new THREE.Vector3(
                     random(size),
                     random(size),
                     0
@@ -102,78 +105,59 @@ ClosestPair.init = function(graphics){
      *  ({scene: THREE.Scene, camera: THREE.PersectiveCamera, renderer: THREE.WebGLRenderer}) -> null 
      */
 
-    // Array of tab names
-    var tabNames = ["3D Demonstration", "2D Demonstration", "Code Sample"];
+    jQuery("#pageContent").load("html/closest_pair.html", function(){
 
-    // Clear out content
-    var tabList = jQuery("#tabList").html("");
-    var tabContent = jQuery("#tabContent").html("");
+        // Get the jQuery object of all the elements needed
+        var canvas = jQuery(".canvas-home canvas");
+        var demo3D = jQuery("#3d-tab");
+        var demo2D = jQuery("#2d-tab1");
 
-    // Create each tab
-    for(var i = 0;i < tabNames.length;i++){
-        var listItem = jQuery("<li id=\"link" + i + "\" class=\"" + (i == 0 ? "active" : "") + "\"></li>");
-        jQuery("<a href=\"#tab" + i + "\" data-toggle=\"tab\">" + tabNames[i] + "</a>").appendTo(listItem);
+        var result = null;
 
-        var div = jQuery("<div class=\"tab-pane fade" + (i == 0 ? " active in" : "") + "\" id=\"tab" + i + "\">");
-        if(i == 0 || i == 1){
-            jQuery("<div class=\"canvas\" style=\"float: left;width: 800px;height: 800px\"></div>").appendTo(div);
-            jQuery("<div class=\"menu\" style=\"float: right;\"></div>").appendTo(div);
+        // Construct AnimationList play menu
+        var makeMenus = function(result, tab){
+            jQuery("<button class=\"glyphicon glyphicon-step-backward\" aria-hidden=\"true\" \>").click(function(){
+                result.animationList.previousAnimation();
+            }).appendTo(tab.find(".menu"));
+            var play = true;
+            jQuery("<button class=\"glyphicon glyphicon-play\" aria-hidden=\"true\">").click(function() {
+                if(play) {
+                    play = false;
+                    jQuery(this).removeClass("glyphicon-play").addClass("glyphicon-pause");
+                    result.animationList.nextAnimationLoop();
+                } else {
+                    play = true;
+                    jQuery(this).addClass("glyphicon-play").removeClass("glyphicon-pause");
+                    result.animationList.playing = false;
+                }
+            }).appendTo(tab.find(".menu"));
+            jQuery("<button class=\"glyphicon glyphicon-step-forward\" aria-hidden=\"true\" \>").click(function(){
+                result.animationList.nextAnimation();
+            }).appendTo(tab.find(".menu"));
+            jQuery(tab.find(".menu")).append("<br />");
         }
 
-        listItem.appendTo(tabList);
-        div.appendTo(tabContent);
-    }
+        jQuery("#tabList #link0 a").click(function (e){
+            // Move the graphics object to the 3D demo first
+            canvas.detach().appendTo(demo3D.find(".canvas"));
+            result = ClosestPair.setup.demo3D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
 
-    // Get the jQuery object of all the elements needed
-    var canvas = jQuery(".canvas-home canvas");
-    var demo3D = jQuery("#tab0 .canvas");
-    var demo2D = jQuery("#tab0 .canvas");
+            demo2D.find(".menu").html("");
+            makeMenus(result, demo3D);
+        });
 
-    // Move the graphics object to the 3D demo first
-    canvas.detach().appendTo(jQuery("#tab0 .canvas"));
-    var result = ClosestPair.setup.demo3D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
+        jQuery("#tabList #link1 a").click(function (e){
+            // Move canvas to 2D demo
+            canvas.detach().appendTo(demo2D.find(".canvas"));
+            result = ClosestPair.setup.demo2D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
 
-    // Construct AnimationList play menu
-    jQuery("<button class=\"glyphicon glyphicon-step-backward\" aria-hidden=\"true\" \>").click(function(){
-        result.animationList.previousAnimation();
-    }).appendTo(".menu");
-    var play = true;
-    jQuery("<button class=\"glyphicon glyphicon-play\" aria-hidden=\"true\">").click(function() {
-        if(play) {
-            play = false;
-            jQuery(this).removeClass("glyphicon-play").addClass("glyphicon-pause");
-            result.animationList.nextAnimationLoop();
-        } else {
-            play = true;
-            jQuery(this).addClass("glyphicon-play").removeClass("glyphicon-pause");
-            result.animationList.playing = false;
-        }
-    }).appendTo(".menu");
-    jQuery("<button class=\"glyphicon glyphicon-step-forward\" aria-hidden=\"true\" \>").click(function(){
-        result.animationList.nextAnimation();
-    }).appendTo(".menu");
-    jQuery(".menu").append("<br />");
+            // Clear out the previous demo's elements
+            demo3D.find(".menu").html("");
+            makeMenus(result, demo2D);
+        });
 
-    jQuery("#tabList #link1 a").click(function (e){
-        // Move canvas to 2D demo
-        canvas.detach().appendTo(demo2D);
-
-        // Clear out the previous demo's elements
-        demo3D.html();
-        jQuery("#tab0 .menu").html();
-
-
-        /*result3.g.redraw = function(){};
-        result3 = null;
-        for(var i = 0;i < graphics.scene.children.length;i++){
-            graphics.scene.remove(graphics.scene.children[i]);
-        }*/
-
-        /*jQuery("#tab1 .canvas").html(graphics.renderer.domElement);
-        result2 = ClosestPair.init2D(graphics, 25/*points*///, 10/*grid size*/);
-        //ClosestPair.makeButtons(result2.al, "#tab1 .menu");
+        jQuery("#tabList #link0 a").click();
     });
-
 
 };
 
