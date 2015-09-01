@@ -10,7 +10,7 @@ ClosestPair.setup = (function(){
 
     function generalSetup(graphics, points, rotate){
         /*  Connect the graphics to the logic
-         *  ({scene: THREE.Scene, camera: THREE.PersectiveCamera, renderer: THREE.WebGLRenderer}, array of THREE.Vector3) ->
+         *  ({scene: THREE.Scene, camera: THREE.PersectiveCamera, renderer: THREE.WebGLRenderer}, array of THREE.Vector3, bool) ->
          */
         // Parameter check
         if(rotate === undefined){
@@ -37,20 +37,28 @@ ClosestPair.setup = (function(){
 
         // Setup the redraw function
         if(rotate){
-            graphics.redraw = function(){
+            redrawFunc = function(){
                 renderBox.rotation.y += 0.01;
                 graphics.renderer.render(graphics.scene, graphics.camera);
-                visualisations.requestAnimationFrame(graphics.redraw);
+                visualisations.redrawID = visualisations.requestAnimationFrame(visualisations.redraw);
             };
         }else{
-            graphics.redraw = function(){
+            redrawFunc = function(){
                 graphics.renderer.render(graphics.scene, graphics.camera);
-                visualisations.requestAnimationFrame(graphics.redraw);
+                visualisations.redrawID = visualisations.requestAnimationFrame(visualisations.redraw);
             };
         }
 
         // Call it
-        graphics.redraw();
+        if(visualisations.redrawID === null){
+            visualisations.redraw = redrawFunc;
+            visualisations.redraw();
+        }else{
+            visualisations.redraw = function() {
+                visualisations.redraw = redrawFunc;
+                visualisations.redraw();
+            }
+        }
 
         // Find the closest pair
         var result = ClosestPair.algorithm(points, pointObjects);
@@ -142,7 +150,7 @@ ClosestPair.init = function(graphics){
             canvas.detach().appendTo(demo3D.find(".canvas"));
             result = ClosestPair.setup.demo3D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
 
-            demo2D.find(".menu").html("");
+            demo3D.find(".menu").html("");
             makeMenus(result, demo3D);
         });
 
@@ -151,8 +159,7 @@ ClosestPair.init = function(graphics){
             canvas.detach().appendTo(demo2D.find(".canvas"));
             result = ClosestPair.setup.demo2D(graphics, ClosestPair.POINT_COUNT /*pointCount*/, 7.2 /*size of containing box*/);
 
-            // Clear out the previous demo's elements
-            demo3D.find(".menu").html("");
+            demo2D.find(".menu").html("");
             makeMenus(result, demo2D);
         });
 

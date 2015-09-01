@@ -143,12 +143,15 @@ window.visualisations = (function () {
         var camera = new THREE.PerspectiveCamera(75., WIDTH / HEIGHT, 0.1, 1000.);
         var renderer = new THREE.WebGLRenderer({
             alpha: true,
-            antialias: true,
+            //antialias: true,
         });
         camera.position.z = 30;
         renderer.setSize(WIDTH, HEIGHT);
         $el.append(renderer.domElement);
-        
+
+        visualisations.redraw = function() {};
+        visualisations.redrawID = null;
+
         return {
             scene: scene,
             camera: camera,
@@ -156,13 +159,13 @@ window.visualisations = (function () {
         };
     }
     
-    var requestAnimationFrame = (function(){
+    var requestAnimationFrame = (function () {
         return  window.requestAnimationFrame        ||
                 window.webkitRequestAnimationFrame  ||
                 window.mozRequesstAnimationFrame    ||
                 window.oRequestAnimationFrame       ||
                 window.msRequestAnimationFrame      ||
-                function(callback){
+                function (callback) {
                     return window.setTimeout(callback, 1000 / 60);
                 };
     })().bind(window);

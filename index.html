@@ -82,14 +82,15 @@
     <script type="text/javascript">
       jQuery.noConflict();
 
-      jQuery(document).ready(function(){
+      // On document ready prepare all the javascript components
+      jQuery(document).ready(function () {
         jQuery('#tabList a').click(function (e) {
           e.preventDefault();
           jQuery(this).tab('show');
         });
 
+        // Initiate the graphics + run ClosestPair demonstration
         var graphics = visualisations.threeSetup(".canvas-home");
-
         ClosestPair.init(graphics);
       });
     </script>
